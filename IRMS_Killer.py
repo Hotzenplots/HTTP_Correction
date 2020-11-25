@@ -1,5 +1,5 @@
 import csv
-import urllib.parse
+from urllib import parse
 import requests
 from lxml import etree
 from concurrent.futures import ThreadPoolExecutor
@@ -35,7 +35,6 @@ def File_Process():
                 continue
             if v.value == None:
                 break
-                # continue
             List_Box_Name.append(list([v.value, row_num, column_num]))
 
     WS_obj = WB_obj['Info']
@@ -78,10 +77,50 @@ def Filling_Box_Info():
             List_Box_Info[box_num]['Box_Type'] = 'guangjiaojiexiang'
         else:
             List_Box_Info[box_num]['Box_Type'] = 'guangfenxianxiang'
+        for row_data in range(len(List_Box_Type)):
+            if List_Box_Info[box_num]['Box_Type'] == List_Box_Type[row_data][0]:
+                List_Box_Info[box_num]['Box_Type_ID'] = List_Box_Type[row_data][1]
+                List_Box_Info[box_num]['ResPoint_Type_ID'] = List_Box_Type[row_data][2]
+        for row_data in range(len(List_Template)):
+            if List_7013[1][1] == List_Template[row_data][2]:
+                List_Box_Info[box_num]['Box_City_ID'] = List_Template[row_data][1]
+                List_Box_Info[box_num]['Box_County_ID'] = List_Template[row_data][3]
+    Swimming_Pool(Query_Box_ID_ResPont_ID_Alias, List_Box_Info)
+
+def Query_Box_ID_ResPont_ID_Alias(Para_List_Box_Info):
+    URL_Box_Query = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
+    Form_Info = '<request><query mc="'+Para_List_Box_Info['Box_Type']+'" ids="" where="1=1 AND ZH_LABEL LIKE \'%'+Para_List_Box_Info['Box_Name']+'%\'" returnfields="INT_ID,ZH_LABEL,STRUCTURE_ID,ALIAS"/></request>'
+    Form_Info_Encoded = "xml="+parse.quote_plus(Form_Info)
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    HTTP_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded","Content-Length": Request_Lenth}
+    Respond_Body = requests.post(URL_Box_Query, data=Form_Info_Encoded, headers=HTTP_Header)
+    Respond_Body = bytes(Respond_Body.text, encoding="utf-8")
+    Respond_Body = etree.HTML(Respond_Body)
+    List_Response_Key = Respond_Body.xpath("//fv/@k")
+    List_Response_Value = Respond_Body.xpath("//fv/@v")
+    Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
+    for box_num in range(len(List_Box_Info)):
+        if Dic_Response['ZH_LABEL'] == List_Box_Info[box_num]['Box_Name']:
+            List_Box_Info[box_num]['Box_ID'] = Dic_Response['INT_ID']
+            List_Box_Info[box_num]['ResPoint_ID'] = Dic_Response['STRUCTURE_ID']
+            List_Box_Info[box_num]['Alias'] = Dic_Response['ALIAS']
+
+def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
+    with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
+        Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
+
+def Push_Box(Para_List_Box_Info):
+    URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/SynchroController/synchroData?sid='+Para_List_Box_Info['Box_ID']+'&sType='+Para_List_Box_Info['Box_Type']+'&longi='+str(Para_List_Box_Info['Longitude'])+'&lati='+str(Para_List_Box_Info['latitude'])
+    HTTP_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded"}
+    Respond_Body = requests.post(URL_Push_Box, headers=HTTP_Header)
+    Respond_Body = bytes(Respond_Body.text, encoding="utf-8")
+    Respond_Body = etree.HTML(Respond_Body)
+    Push_Result = Respond_Body.xpath('//message/text()')
+    print('P1-{}-{}'.format(Para_List_Box_Info['Box_Name'], Push_Result[0]))
 
 if __name__ == '__main__':
     File_Process()
     Filling_Box_Info()
-    # print(List_Box_Name)
-    # print(List_Box_Info)
-    print(List_7013[0])
+    Swimming_Pool(Push_Box, List_Box_Info)
+
+
