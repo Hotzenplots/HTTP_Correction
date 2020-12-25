@@ -12,8 +12,9 @@ from time import sleep
 
 File_Name = '豪德置业'
 
-P1_Push_Box                     = False
-P2_Draw_Support_Sys_and_Segment = True
+P1_Push_Box                         = False
+P2_Generate_Support_Sys_and_Segment = False
+P3_Generate_Cable_Sys_and_Segment   = True
 
 def File_Process_and_Generate_Basic_Data():
     '''读取本地数据,在不查询的前提下填充几个List'''
@@ -39,7 +40,7 @@ def File_Process_and_Generate_Basic_Data():
     WB_obj = load_workbook(File_Name+'.xlsx')
     WS_obj = WB_obj['Template']
     List_Template = []
-    cell_range = WS_obj['A2': 'R11']
+    cell_range = WS_obj['A2': 'S11']
     for row_data in cell_range:
         List_Temp_1 = []
         for cell in row_data:
@@ -48,7 +49,7 @@ def File_Process_and_Generate_Basic_Data():
     for list_num in List_Template:
         if List_7013[1][1] == list_num[0]:
             List_Template_Selected = copy.deepcopy(list_num)
-        
+
     '''读取并整理Sheet_Info,生成List_Box_Type和其他参数'''
     WS_obj = WB_obj['Info']
     Longitude_Start = WS_obj['B1'].value
@@ -201,8 +202,7 @@ def Add_Support_Segment():
     for ocs_num in List_OCS_Info:
         Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Support_Sys_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="INT_ID" v="new-27991311"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="PROJECT_CODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="RESOURCE_LOCATION" v="'+str(ocs_num['Field_Type'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="SYSTEM_LEVEL" v="'+str(ocs_num['Business_Level'])+'"/></mo>'
         List_Form_Info_Body.append(Form_Info_Body)
-    # Form_Info_Body = ''.join(List_Form_Info_Body)
-    Form_Info_Body = List_Form_Info_Body[52]+List_Form_Info_Body[53]+List_Form_Info_Body[54]
+    Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
     Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
     Request_Lenth = chr(len(Form_Info_Encoded))
@@ -212,7 +212,25 @@ def Add_Support_Segment():
     Response_Body = etree.HTML(Response_Body)
     List_Add_Support_Segment_State = Response_Body.xpath('//@loaded')
     print('P2-引上段建立-{}'.format(List_Add_Support_Segment_State[0]))
-    # print(Form_Info_Body)
+
+def Add_Optical_Cable_Segment():
+    URL_Add_Optical_Cable_Segment = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesAdd?coreNamingRules=0'
+    Form_Info_Head = '<xmldata mode="FibersegAddMode"><mc type="guanglanduan">'
+    Form_Info_Tail = '</mc></xmldata>'
+    List_Form_Info_Body = []
+    for ocs_num in List_OCS_Info:
+        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Cable_Sys_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="FIBER_TYPE" v="2"/><fv k="INT_ID" v="new-27991311"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="FIBER_NUM" v="'+str(ocs_num['Width'])+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="WIRE_SEG_TYPE" v="GYTA-'+str(ocs_num['Width'])+'"/><fv k="SERVICE_LEVEL" v="14"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="PROJECTCODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/></mo>'
+        List_Form_Info_Body.append(Form_Info_Body)
+    Form_Info_Body = ''.join(List_Form_Info_Body)
+    Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
+    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Add_Optical_Cable_Segment, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_Add_Optical_Cable_Segment_State = Response_Body.xpath('//@loaded')
+    print('P3-光缆段建立-{}'.format(List_Add_Optical_Cable_Segment_State[0]))
 
 def Prepare_Support_Sys_and_Cable_Sys():
     Task_Name_ID_List = List_7013[1][5].split('-')
@@ -243,7 +261,7 @@ def Prepare_Support_Sys_and_Cable_Sys():
         Support_Sys_ID = Support_Sys_ID[0]
         for ocs_num in List_OCS_Info:
             ocs_num['Support_Sys_ID'] = Support_Sys_ID
-        print('P2-引上系统ID-{}'.format(Support_Sys_ID))
+        print('引上系统ID-{}'.format(Support_Sys_ID))
 
     elif List_SS_Count[0] == '1':
         #Get Support_Sys_ID
@@ -251,7 +269,7 @@ def Prepare_Support_Sys_and_Cable_Sys():
         Support_Sys_ID = Support_Sys_ID[0]
         for ocs_num in List_OCS_Info:
             ocs_num['Support_Sys_ID'] = Support_Sys_ID
-        print('P2-引上系统ID-{}'.format(Support_Sys_ID))
+        print('引上系统ID-{}'.format(Support_Sys_ID))
 
     #Cable_System
     URL_Query_CS_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGetPage'
@@ -278,7 +296,7 @@ def Prepare_Support_Sys_and_Cable_Sys():
         Cable_Sys_ID = Cable_Sys_ID[0]
         for ocs_num in List_OCS_Info:
             ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
-        print('P2-光缆系统ID-{}'.format(Cable_Sys_ID))
+        print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
     elif List_CS_Count[0] == '1':
         #Get Cable_Sys_ID
@@ -286,7 +304,7 @@ def Prepare_Support_Sys_and_Cable_Sys():
         Cable_Sys_ID = Cable_Sys_ID[0]
         for ocs_num in List_OCS_Info:
             ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
-        print('P2-光缆系统ID-{}'.format(Cable_Sys_ID))
+        print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
 def Get_JSESSIONIRMS_and_route():
     Browser_Obj = webdriver.Ie()
@@ -311,7 +329,7 @@ if __name__ == '__main__':
         Swimming_Pool(Query_Box_ID_ResPont_ID_Alias, List_Box_Info)
         Swimming_Pool(Push_Box, List_Box_Info)
         print('P1-结束')
-    if P2_Draw_Support_Sys_and_Segment:
+    if P2_Generate_Support_Sys_and_Segment:
         print('P2-开始')
         if not P1_Push_Box:
             Swimming_Pool(Query_Box_ID_ResPont_ID_Alias, List_Box_Info)
@@ -319,6 +337,14 @@ if __name__ == '__main__':
         Query_Project_Code_ID()
         Add_Support_Segment()
         print('P2-结束')
+    if P3_Generate_Cable_Sys_and_Segment:
+        print('P3-开始')
+        if (not P1_Push_Box) and (not P2_Generate_Support_Sys_and_Segment):
+            Swimming_Pool(Query_Box_ID_ResPont_ID_Alias, List_Box_Info)
+        Prepare_Support_Sys_and_Cable_Sys()
+        Query_Project_Code_ID()
+        Add_Optical_Cable_Segment()
+        print('P3-结束')
         # print(sorted(List_OCS_Info[10].items(), key = lambda item:item[0]))
         # print(List_OCS_Info[69])
         # print(List_Box_Info[20])
