@@ -91,8 +91,8 @@ def File_Process_and_Generate_Basic_Data():
             if List_Box_Info[box_num]['Box_Type'] == List_Box_Type[row_data][0]:
                 List_Box_Info[box_num]['Box_Type_ID'] = List_Box_Type[row_data][1]
                 List_Box_Info[box_num]['ResPoint_Type_ID'] = List_Box_Type[row_data][2]
-        List_Box_Info[box_num]['City_ID'] = List_Template_Selected[1]
-        List_Box_Info[box_num]['County_ID'] = List_Template_Selected[16]
+        List_Box_Info[box_num]['City_ID'] = List_Template_Selected[16]
+        List_Box_Info[box_num]['County_ID'] = List_Template_Selected[1]
 
     '''读取并整理Sheet_OCS_List,生成List_CS_Info'''
     WS_obj = WB_obj['OCS_List']
@@ -467,7 +467,7 @@ def Generate_Tray(Para_List_Box_Info):
     Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
     Response_Body = etree.HTML(Response_Body)
     List_Terminal_IDs = Response_Body.xpath('//terminal//@int_id')
-    print('P5-Terminal_IDs_Count-{}'.format(len(List_Terminal_IDs)))
+    print('P5-Terminal_IDs_Count-{}-{}'.format(len(List_Terminal_IDs), Para_List_Box_Info['Box_Name']))
     Para_List_Box_Info['Terminal_IDs'] = '&'.join(List_Terminal_IDs)
 
 if __name__ == '__main__':
@@ -500,11 +500,11 @@ if __name__ == '__main__':
         print('P4-结束')
     if P5_Generate_ODM_and_Tray:
         print('P5-开始')
-        # Swimming_Pool(Generate_ODM, List_Box_Info)
+        Swimming_Pool(Generate_ODM, List_Box_Info)
         Swimming_Pool(Generate_Tray, List_Box_Info)
         print('P5-结束')
 
 
         # print(sorted(List_CS_Info[10].items(), key = lambda item:item[0]))
-        # print(List_CS_Info[69])
+        # print(List_CS_Info[20])
         # print(List_Box_Info[20])
