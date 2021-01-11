@@ -523,6 +523,8 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Termination_Count'] = box_info['2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1)
             box_info['Direct_Melt_Start'] = box_info['2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1) + 1
             box_info['Direct_Melt_Count'] = box_info['DL_2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1)
+            if box_info['Direct_Melt_Count'] == 0: #尾箱没有直熔数据
+                box_info['Direct_Melt_Start'] = 0
         elif box_info['1FS_Count'] != 0:
 
             List_Width = []
@@ -545,9 +547,24 @@ def Generate_Termination_and_Direct_Melt_Data():
                 else:
                     box_info['BackUp_Fiber_Count'].append(0)
             
+            for each_BackUp_Fiber_Count, each_DL_2FS in zip(box_info['BackUp_Fiber_Count'], List_DL_2FS):
+                box_info['Termination_Start'].append(1)
+                box_info['Termination_Count'].append(int(each_DL_2FS) * (int(each_BackUp_Fiber_Count) + 1))
+                box_info['Direct_Melt_Start'] = '0'
+                box_info['Direct_Melt_Count'] = '0'
+            
             box_info['BackUp_Fiber_Count'] = [str(i) for i in box_info['BackUp_Fiber_Count']]
+            box_info['Termination_Start'] = [str(i) for i in box_info['Termination_Start']]
+            box_info['Termination_Count'] = [str(i) for i in box_info['Termination_Count']]
+            box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
+            box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
+
             box_info['BackUp_Fiber_Count'] = '&'.join(box_info['BackUp_Fiber_Count'])
-            print(box_info['BackUp_Fiber_Count'])
+            box_info['Termination_Start'] = '&'.join(box_info['Termination_Start'])
+            box_info['Termination_Count'] = '&'.join(box_info['Termination_Count'])
+            box_info['Direct_Melt_Start'] = '&'.join(box_info['Direct_Melt_Start'])
+            box_info['Direct_Melt_Count'] = '&'.join(box_info['Direct_Melt_Count'])
+            #一级箱子下行多光缆,Termination_Start不严谨,需要在功能函数修正
 
 if __name__ == '__main__':
 
@@ -602,5 +619,5 @@ if __name__ == '__main__':
         # test = {'A_Box_Name': '太原阳曲县山西豪德置业有限公司企业宽带7号西楼道GF0096', 'Z_Box_Name': '太原阳曲县山西豪德置业有限公司企业宽带GF1001号西楼道GF1001', 'Width': 24, 'A_Box_Type_ID': 9204, 'A_Box_Type': 'guangfenxianxiang', 'A_ResPoint_Type_ID': 9115, 'A_Longitude': 112.715537063552, 'A_Latitude': 38.1612514963058, 'Z_Box_Type_ID': 9204, 'Z_Box_Type': 'guangfenxianxiang', 'Z_ResPoint_Type_ID': 9115, 'Z_Longitude': 112.715937063552, 'Z_Latitude': 38.1612514963058, 'Length': 35, 'Business_Level': 8, 'Life_Cycle': 8, 'Owner_Type': 1, 'Owner_Name': 0, 'Field_Type': '市城区域', 'City_ID': 445835190, 'County_ID': 445835318, 'DQS_Project_ID': 246552123, 'DQS_ID':246552126, 'DQS_County_ID': 483582248, 'DQS_Maintainer_ID': 685585124, 'Task_Name_ID': '2870791671', 'A_Box_ID': '730421212', 'A_ResPoint_ID': '730421292', 'Z_Box_ID': '730421213', 'Z_ResPoint_ID': '730421293', 'Support_Sys_ID': '805438309', 'Cable_Sys_ID': '805427890', 'Project_Code_ID': '54487', 'Support_Seg_Name': '太原阳曲县山西豪德置业有限公司企业宽带7号西楼道GF0096资源点-太原阳曲县山西豪德置业有限公司企业宽带GF1001号西楼道GF1001资源点引上段', 'Support_Seg_ID': '805553949', 'Cable_Seg_Name': '太原阳曲县山西豪德置业有限公司企业宽带7号西楼道GF0096资源点-太原阳曲县山西豪德置业有限公司企业宽带GF1001号西楼道GF1001资源点光缆段', 'Cable_Seg_ID': '807793523'}
         #Query_CS_Fiber_IDs(test)
         for box_info in List_Box_Info:
-            print(box_info['BackUp_Fiber_Count'])
+            print(box_info['BackUp_Fiber_Count'],box_info['Termination_Start'],box_info['Termination_Count'],box_info['Direct_Melt_Start'],box_info['Direct_Melt_Count'])
         print('P6-结束')
