@@ -1,1 +1,2 @@
-print('jjj"'+'ttt'+'"8uy')
+ 
+print(0 % 12)
