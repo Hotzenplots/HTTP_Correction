@@ -12,24 +12,29 @@ from time import sleep
 
 '''
 一级箱子DL_2FS_Count,可以考虑放弃使用&
+主流程函数封装,实现多小区操作
+光路申请(含工单建立)
+提交工单(理想情况)
+光路设计
+工单号写入(含工单建立)
 '''
 
-File_Name = '豪德置业'
+File_Name = ['豪德置业','富力E区']
 
 P1_Push_Box                    = False
 P2_Generate_Support_Segment    = False
 P3_Generate_Cable_Segment      = False
 P4_Cable_Lay                   = False
 P5_Generate_ODM_and_Tray       = False
-P6_Termination_and_Direct_Melt = True
+P6_Termination_and_Direct_Melt = False
 
-def File_Process_and_Generate_Basic_Data():
+def File_Process_and_Generate_Basic_Data(Para_File_Name):
     '''读取本地数据,在不查询的前提下填充几个List'''
 
     '''读取并整理7013表,生成List_7013'''
     global List_7013
     List_7013 = []
-    with open(File_Name+'.csv') as file_csv:
+    with open(Para_File_Name+'.csv') as file_csv:
         reader_obj = csv.reader(file_csv)
         List_7013 = list(reader_obj)
     for row_data in range(len(List_7013)):
@@ -44,7 +49,7 @@ def File_Process_and_Generate_Basic_Data():
     Task_Name_ID_List = List_7013[1][5].split('-')
 
     '''读取并整理Sheet_Template,生成List_Template'''
-    WB_obj = load_workbook(File_Name+'.xlsx')
+    WB_obj = load_workbook(Para_File_Name+'.xlsx')
     WS_obj = WB_obj['Template']
     List_Template = []
     cell_range = WS_obj['A2': 'S11']
@@ -671,9 +676,8 @@ def Direct_Melt(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         print('P6-{}-是一级分纤箱,不涉及直熔'.format(Para_List_Box_Data['Box_Name']))
 
-
-if __name__ == '__main__':
-    File_Process_and_Generate_Basic_Data()
+def Main_Process(Para_File_Name):
+    File_Process_and_Generate_Basic_Data(Para_File_Name)
     print('查询分纤箱数据开始')
     Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
     print('查询分纤箱数据结束')
@@ -735,3 +739,6 @@ if __name__ == '__main__':
     # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
     # print(List_CS_Data[20])
     # print(List_Box_Data[0])
+if __name__ == '__main__':
+    for each_File_Name in File_Name:
+        Main_Process(each_File_Name)
