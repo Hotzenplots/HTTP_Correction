@@ -12,14 +12,13 @@ from time import sleep
 
 '''
 一级箱子DL_2FS_Count,可以考虑放弃使用&
-主流程函数封装,实现多小区操作
 光路申请(含工单建立)
 提交工单(理想情况)
 光路设计
 工单号写入(含工单建立)
 '''
 
-File_Name = ['豪德置业','富力E区']
+File_Name = ['豪德置业']
 
 P1_Push_Box                    = False
 P2_Generate_Support_Segment    = False
@@ -27,6 +26,7 @@ P3_Generate_Cable_Segment      = False
 P4_Cable_Lay                   = False
 P5_Generate_ODM_and_Tray       = False
 P6_Termination_and_Direct_Melt = False
+P7_Generate_Optical_Circut     = True
 
 def File_Process_and_Generate_Basic_Data(Para_File_Name):
     '''读取本地数据,在不查询的前提下填充几个List'''
@@ -150,6 +150,56 @@ def File_Process_and_Generate_Basic_Data(Para_File_Name):
         dic_num_in_osc['DQS_Maintainer_ID'] = List_Template_Selected[9]
         dic_num_in_osc['Task_Name_ID'] = Task_Name_ID_List[0]
 
+    '''生成List_OC_Data'''
+    global List_OC_Data
+    List_OC_Data = []
+    for each_7013_line in List_7013: 
+        if each_7013_line[10] == '二级':
+            List_OC_Data.append(dict({
+                'Z_FS_Name': each_7013_line[11],
+                'Z_Box_Name':  each_7013_line[3],
+                'A_FS_Name': each_7013_line[8],
+                'City_ID': List_Template_Selected[16],
+                'County_ID': List_Template_Selected[1],
+                'Business_Name': Task_Name_ID_List[1],
+                'Project_Code': each_7013_line[4],
+                'Task_Name': each_7013_line[5],
+                'Task_Name_ID': Task_Name_ID_List[0],
+                'DQS_Project': List_Template_Selected[11],
+                'DQS_Project_ID': List_Template_Selected[3],
+                'DQS': List_Template_Selected[12],
+                'DQS_ID': List_Template_Selected[5],
+                'DQS_County': List_Template_Selected[13],
+                'DQS_County_ID': List_Template_Selected[7],
+                'DQS_Maintainer': List_Template_Selected[8],
+                'DQS_Maintainer_ID': List_Template_Selected[9],
+                'AEquType': 10002,
+                'ZEquType': 10002,
+                'SXBussType': '家客业务',
+                'AJoinName': '网元成端设备',
+                'ZJoinName': '网元成端设备',
+                'FiberCount': 1,
+                'BussType': 207, # 设备类型 207 PON/402 直联光路
+                'AppType': 1005, # 应用类型  1005 业务光路/1006 尾纤光路
+                'ServiceLevel': 101, # 101 家客接入/111 驻地网
+                }))
+    for each_oc_data in List_OC_Data:
+        for each_7013_line in List_7013:
+            if each_oc_data['A_FS_Name'] == each_7013_line[11]: # 中文名称 each_7013_line[2] # 资管中文名称
+                each_oc_data['A_Box_Name'] = each_7013_line[3]
+        if each_oc_data['A_Box_Name'] == each_oc_data['Z_Box_Name']:
+            each_oc_data['BussType'] = 402
+            each_oc_data['AppType'] = 1006
+        for each_box_data in List_Box_Data:
+            if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
+                each_oc_data['A_Box_Type'] = each_box_data['Box_Type']
+                each_oc_data['A_Box_Type_ID'] = each_box_data['Box_Type_ID']
+                each_oc_data['A_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
+            if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
+                each_oc_data['Z_Box_Type'] = each_box_data['Box_Type']
+                each_oc_data['Z_Box_Type_ID'] = each_box_data['Box_Type_ID']
+                each_oc_data['Z_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
+
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
     Response_Body = requests.get(URL_Query_Project_Code_ID)
@@ -163,6 +213,8 @@ def Query_Project_Code_ID():
         box_num['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
     for ocs_num in List_CS_Data:
         ocs_num['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
+    for oc_data in List_OC_Data:
+        oc_data['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
 
 def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     URL_Query_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
@@ -175,6 +227,8 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     Response_Body = etree.HTML(Response_Body)
     List_Response_Key = Response_Body.xpath("//fv/@k")
     List_Response_Value = Response_Body.xpath("//fv/@v")
+    List_Response_Value_tv = Response_Body.xpath("//fv/@tv")
+    print(List_Response_Value_tv)
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
     for box_num in range(len(List_Box_Data)):
         if Dic_Response['ZH_LABEL'] == List_Box_Data[box_num]['Box_Name']:
@@ -190,6 +244,14 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             if ocs_num['Z_Box_Name'] == box_num['Box_Name']:
                 ocs_num['Z_Box_ID'] = box_num['Box_ID']
                 ocs_num['Z_ResPoint_ID'] = box_num['ResPoint_ID']
+    for each_oc_data in List_OC_Data:
+        for each_box_data in List_Box_Data:
+            if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
+                each_oc_data['A_Box_ID'] = each_box_data['Box_ID']
+                each_oc_data['A_ResPoint_ID'] = each_box_data['ResPoint_ID']
+            if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
+                each_oc_data['Z_Box_ID'] = each_box_data['Box_ID']
+                each_oc_data['Z_ResPoint_ID'] = each_box_data['ResPoint_ID']
 
 def Prepare_Support_Sys_and_Cable_Sys():
     Task_Name_ID_List = List_7013[1][5].split('-')
@@ -676,6 +738,9 @@ def Direct_Melt(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         print('P6-{}-是一级分纤箱,不涉及直熔'.format(Para_List_Box_Data['Box_Name']))
 
+def Generate_Optical_Circut_Data():
+    pass
+
 def Main_Process(Para_File_Name):
     File_Process_and_Generate_Basic_Data(Para_File_Name)
     print('查询分纤箱数据开始')
@@ -685,7 +750,8 @@ def Main_Process(Para_File_Name):
         P3_Generate_Cable_Segment or \
         P4_Cable_Lay or \
         P5_Generate_ODM_and_Tray or \
-        P6_Termination_and_Direct_Melt:
+        P6_Termination_and_Direct_Melt or \
+        P7_Generate_Optical_Circut:
         print('查询引上系统/光缆系统数据开始')
         Prepare_Support_Sys_and_Cable_Sys()
         Query_Project_Code_ID()
@@ -708,6 +774,10 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         Generate_Termination_and_Direct_Melt_Data()
         print('查询光缆纤芯数据结束')
+    if P7_Generate_Optical_Circut:
+        print('生成光路数据开始')
+        Generate_Optical_Circut_Data()
+        print('生成光路数据结束')
 
     if P1_Push_Box:
         print('P1-开始')
@@ -735,10 +805,18 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Termination, List_Box_Data)
         Swimming_Pool(Direct_Melt, List_Box_Data)
         print('P6-结束')
+    if P7_Generate_Optical_Circut:
+        print('P7-开始')
+        print('P7-结束')
 
     # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
     # print(List_CS_Data[20])
     # print(List_Box_Data[0])
+
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
+    # print(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+
+    print(List_OC_Data[0])
+    print(List_OC_Data[1])
