@@ -11,6 +11,8 @@ from selenium import webdriver
 from time import sleep
 
 '''
+7013CSV是基础,除P1外都需要
+
 一级箱子DL_2FS_Count,可以考虑放弃使用&
 光路申请(含工单建立)
 提交工单(理想情况)
@@ -28,7 +30,7 @@ P5_Generate_ODM_and_Tray       = False
 P6_Termination_and_Direct_Melt = False
 P7_Generate_Optical_Circut     = True
 
-def File_Process_and_Generate_Basic_Data(Para_File_Name):
+def Generate_Local_Data(Para_File_Name):
     '''读取本地数据,在不查询的前提下填充几个List'''
 
     '''读取并整理7013表,生成List_7013'''
@@ -228,13 +230,13 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     List_Response_Key = Response_Body.xpath("//fv/@k")
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_Response_Value_tv = Response_Body.xpath("//fv/@tv")
-    print(List_Response_Value_tv)
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
     for box_num in range(len(List_Box_Data)):
         if Dic_Response['ZH_LABEL'] == List_Box_Data[box_num]['Box_Name']:
             List_Box_Data[box_num]['Box_ID'] = Dic_Response['INT_ID']
             List_Box_Data[box_num]['ResPoint_ID'] = Dic_Response['STRUCTURE_ID']
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
+            List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
     for ocs_num in List_CS_Data:
         for box_num in List_Box_Data:
             if ocs_num['A_Box_Name'] == box_num['Box_Name']:
@@ -249,11 +251,13 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
                 each_oc_data['A_Box_ID'] = each_box_data['Box_ID']
                 each_oc_data['A_ResPoint_ID'] = each_box_data['ResPoint_ID']
+                each_oc_data['A_ResPoint_Name'] = each_box_data['ResPoint_Name']
             if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
                 each_oc_data['Z_Box_ID'] = each_box_data['Box_ID']
                 each_oc_data['Z_ResPoint_ID'] = each_box_data['ResPoint_ID']
+                each_oc_data['Z_ResPoint_Name'] = each_box_data['ResPoint_Name']
 
-def Prepare_Support_Sys_and_Cable_Sys():
+def Query_Support_Sys_and_Cable_Sys():
     Task_Name_ID_List = List_7013[1][5].split('-')
     Support_Sys_Name = List_7013[1][0]+List_7013[1][1]+Task_Name_ID_List[1]+'区内引上系统'
     Cable_Sys_Name = List_7013[1][0]+List_7013[1][1]+Task_Name_ID_List[1]+'接入层架空光缆'
@@ -426,18 +430,6 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
             cable_seg['Cable_Seg_Name'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_Name']
             cable_seg['Cable_Seg_ID'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID']
 
-def Cable_Lay(Para_List_CS_Data):
-    URL_Cable_Lay = 'http://10.209.199.74:8120/igisserver_osl/rest/optCabLayInspur/saveFiberSegM1'
-    Form_Info = '<xmldata><fiberseg id="'+str(Para_List_CS_Data['Cable_Seg_ID'])+'" aid="'+str(Para_List_CS_Data['A_ResPoint_ID'])+'" zid="'+str(Para_List_CS_Data['Z_ResPoint_ID'])+'"/><cablays><cablay id="'+str(Para_List_CS_Data['Support_Seg_ID'])+'" type="yinshangduan" name="'+str(Para_List_CS_Data['Support_Seg_Name'])+'" aid="'+str(Para_List_CS_Data['A_ResPoint_ID'])+'" zid="'+str(Para_List_CS_Data['Z_ResPoint_ID'])+'"/></cablays></xmldata>'
-    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
-    Request_Lenth = chr(len(Form_Info_Encoded))
-    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Cable_Lay, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
-    List_Cable_Lay_State = Response_Body.xpath('//@msg')
-    print('P4-敷设-{}-{}'.format(List_Cable_Lay_State[0], Para_List_CS_Data['Cable_Seg_Name']))
-
 def Generate_Topology():
     global CS_Topology
     CS_Topology = []
@@ -513,34 +505,6 @@ def Generate_FS_Data():
             for cable_seg_data in List_CS_Data:
                 if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
                     box_info['ODM_Rows'] = box_info['Tray_Count'] = math.ceil(cable_seg_data['Width'] / 12) + box_info['ODM_Rows']
-
-def Generate_ODM(Para_List_Box_Data):
-    URL_Generate_ODM = 'http://10.209.199.74:8120/nxapp/room/editODMData.ilf'
-    Form_Info = '<params><odm id="" rowflag="+" rownum="1" colflag="+" colnum="12"><attribute module_rowno="1" rowno="'+str(Para_List_Box_Data['ODM_Rows'])+'" columnno="12" terminal_arr="0" maintain_county="'+str(Para_List_Box_Data['County_ID'])+'" maintain_city="'+str(Para_List_Box_Data['City_ID'])+'" structure_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" structure_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" related_rack="'+str(Para_List_Box_Data['Box_ID'])+'" related_type="'+str(Para_List_Box_Data['Box_Type_ID'])+'" status="8" model="odm"/></odm></params>'
-    Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + parse.quote_plus(Form_Info_Tail)
-    Request_Lenth = chr(len(Form_Info_Encoded))
-    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Generate_ODM, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
-    Response_Body = etree.HTML(Response_Body)
-    List_ODM_ID = Response_Body.xpath('//@int_id')
-    Para_List_Box_Data['ODM_ID'] = List_ODM_ID[0]
-    print('P5-ODM-{}-in-{}'.format(List_ODM_ID[0], Para_List_Box_Data['Box_Name']))
-
-def Generate_Tray(Para_List_Box_Data):
-    URL_Generate_Tray = "http://10.209.199.74:8120/nxapp/room/editTray_sx.ilf"
-    Form_Info = '<params model="tray"><obj related_rack="'+str(Para_List_Box_Data['Box_ID'])+'" related_type="'+str(Para_List_Box_Data['Box_Type_ID'])+'" structure_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" structure_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" deviceshelf_id="'+str(Para_List_Box_Data['ODM_ID'])+'" tray_no="1" tray_num="'+str(Para_List_Box_Data['Tray_Count'])+'" row_count="1" col_count="12" int_id=""/></params>'
-    Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + parse.quote_plus(Form_Info_Tail)
-    Request_Lenth = chr(len(Form_Info_Encoded))
-    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Generate_Tray, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
-    Response_Body = etree.HTML(Response_Body)
-    List_Terminal_IDs = Response_Body.xpath('//terminal//@int_id')
-    print('P5-Terminal_IDs_Count-{}-{}'.format(len(List_Terminal_IDs), Para_List_Box_Data['Box_Name']))
-    Para_List_Box_Data['Terminal_IDs'] = '&'.join(List_Terminal_IDs)
 
 def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
     URL_Query_ODM_ID_and_Terminarl_IDs = 'http://10.209.199.74:8120/nxapp/room/queryShelfAndModuleData.ilf'
@@ -632,7 +596,47 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Direct_Melt_Start'] = '&'.join(box_info['Direct_Melt_Start'])
             box_info['Direct_Melt_Count'] = '&'.join(box_info['Direct_Melt_Count'])
 
-def Termination(Para_List_Box_Data):
+def Execute_Cable_Lay(Para_List_CS_Data):
+    URL_Cable_Lay = 'http://10.209.199.74:8120/igisserver_osl/rest/optCabLayInspur/saveFiberSegM1'
+    Form_Info = '<xmldata><fiberseg id="'+str(Para_List_CS_Data['Cable_Seg_ID'])+'" aid="'+str(Para_List_CS_Data['A_ResPoint_ID'])+'" zid="'+str(Para_List_CS_Data['Z_ResPoint_ID'])+'"/><cablays><cablay id="'+str(Para_List_CS_Data['Support_Seg_ID'])+'" type="yinshangduan" name="'+str(Para_List_CS_Data['Support_Seg_Name'])+'" aid="'+str(Para_List_CS_Data['A_ResPoint_ID'])+'" zid="'+str(Para_List_CS_Data['Z_ResPoint_ID'])+'"/></cablays></xmldata>'
+    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Cable_Lay, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_Cable_Lay_State = Response_Body.xpath('//@msg')
+    print('P4-敷设-{}-{}'.format(List_Cable_Lay_State[0], Para_List_CS_Data['Cable_Seg_Name']))
+
+def Execute_Generate_ODM(Para_List_Box_Data):
+    URL_Generate_ODM = 'http://10.209.199.74:8120/nxapp/room/editODMData.ilf'
+    Form_Info = '<params><odm id="" rowflag="+" rownum="1" colflag="+" colnum="12"><attribute module_rowno="1" rowno="'+str(Para_List_Box_Data['ODM_Rows'])+'" columnno="12" terminal_arr="0" maintain_county="'+str(Para_List_Box_Data['County_ID'])+'" maintain_city="'+str(Para_List_Box_Data['City_ID'])+'" structure_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" structure_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" related_rack="'+str(Para_List_Box_Data['Box_ID'])+'" related_type="'+str(Para_List_Box_Data['Box_Type_ID'])+'" status="8" model="odm"/></odm></params>'
+    Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
+    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + parse.quote_plus(Form_Info_Tail)
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Generate_ODM, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
+    Response_Body = etree.HTML(Response_Body)
+    List_ODM_ID = Response_Body.xpath('//@int_id')
+    Para_List_Box_Data['ODM_ID'] = List_ODM_ID[0]
+    print('P5-ODM-{}-in-{}'.format(List_ODM_ID[0], Para_List_Box_Data['Box_Name']))
+
+def Execute_Generate_Tray(Para_List_Box_Data):
+    URL_Generate_Tray = "http://10.209.199.74:8120/nxapp/room/editTray_sx.ilf"
+    Form_Info = '<params model="tray"><obj related_rack="'+str(Para_List_Box_Data['Box_ID'])+'" related_type="'+str(Para_List_Box_Data['Box_Type_ID'])+'" structure_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" structure_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" deviceshelf_id="'+str(Para_List_Box_Data['ODM_ID'])+'" tray_no="1" tray_num="'+str(Para_List_Box_Data['Tray_Count'])+'" row_count="1" col_count="12" int_id=""/></params>'
+    Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
+    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + parse.quote_plus(Form_Info_Tail)
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Generate_Tray, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
+    Response_Body = etree.HTML(Response_Body)
+    List_Terminal_IDs = Response_Body.xpath('//terminal//@int_id')
+    print('P5-Terminal_IDs_Count-{}-{}'.format(len(List_Terminal_IDs), Para_List_Box_Data['Box_Name']))
+    Para_List_Box_Data['Terminal_IDs'] = '&'.join(List_Terminal_IDs)
+
+def Execute_Termination(Para_List_Box_Data):
 
     if Para_List_Box_Data['1FS_Count'] == 0:
 
@@ -702,7 +706,7 @@ def Termination(Para_List_Box_Data):
     List_Termination_State = Response_Body.xpath('//@msg')
     print('P6-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
-def Direct_Melt(Para_List_Box_Data):
+def Execute_Direct_Melt(Para_List_Box_Data):
     if Para_List_Box_Data['1FS_Count'] == 0:
 
         for cable_seg_data in List_CS_Data:
@@ -738,46 +742,55 @@ def Direct_Melt(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         print('P6-{}-是一级分纤箱,不涉及直熔'.format(Para_List_Box_Data['Box_Name']))
 
-def Generate_Optical_Circut_Data():
-    pass
+def Query_FS_ID():
+    ...
 
 def Main_Process(Para_File_Name):
-    File_Process_and_Generate_Basic_Data(Para_File_Name)
-    print('查询分纤箱数据开始')
-    Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
-    print('查询分纤箱数据结束')
-    if P2_Generate_Support_Segment or \
-        P3_Generate_Cable_Segment or \
-        P4_Cable_Lay or \
-        P5_Generate_ODM_and_Tray or \
-        P6_Termination_and_Direct_Melt or \
-        P7_Generate_Optical_Circut:
-        print('查询引上系统/光缆系统数据开始')
-        Prepare_Support_Sys_and_Cable_Sys()
+    Generate_Local_Data(Para_File_Name)
+    if (P1_Push_Box or 
+        P2_Generate_Support_Segment or 
+        P3_Generate_Cable_Segment or 
+        P4_Cable_Lay or 
+        P5_Generate_ODM_and_Tray or 
+        P6_Termination_and_Direct_Melt or 
+        P7_Generate_Optical_Circut):
+        print('查询分纤箱数据开始')
+        Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
+        print('查询分纤箱数据结束')
+    if (P2_Generate_Support_Segment or 
+        P3_Generate_Cable_Segment or 
+        P4_Cable_Lay or 
+        P5_Generate_ODM_and_Tray or 
+        P6_Termination_and_Direct_Melt):
+        print('查询引上系统/光缆系统ID')
+        Query_Support_Sys_and_Cable_Sys()
+    if (P2_Generate_Support_Segment or 
+        P3_Generate_Cable_Segment or 
+        P7_Generate_Optical_Circut):
+        print('查询项目编号ID')
         Query_Project_Code_ID()
-        print('查询引上系统/光缆系统数据结束')
-    if P4_Cable_Lay or \
-        P6_Termination_and_Direct_Melt:
-        print('查询引上段/光缆段数据开始')
+    if (P4_Cable_Lay or 
+        P6_Termination_and_Direct_Melt):
+        print('查询引上段/光缆段ID开始')
         Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
-        print('查询引上段/光缆段数据结束')
-    if P5_Generate_ODM_and_Tray or \
-        P6_Termination_and_Direct_Melt:
+        print('查询引上段/光缆段ID结束')
+    if (P5_Generate_ODM_and_Tray or 
+        P6_Termination_and_Direct_Melt):
         Generate_Topology()
         Generate_FS_Data()
         if not ('ODM_ID' in List_Box_Data[0]):
-            print('查询ODM数据开始')
+            print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
-            print('查询ODM数据结束')
+            print('查询ODM_ID结束')
     if P6_Termination_and_Direct_Melt:
-        print('查询光缆纤芯数据开始')
+        print('查询光缆纤芯ID开始')
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         Generate_Termination_and_Direct_Melt_Data()
-        print('查询光缆纤芯数据结束')
+        print('查询光缆纤芯ID结束')
     if P7_Generate_Optical_Circut:
-        print('生成光路数据开始')
-        Generate_Optical_Circut_Data()
-        print('生成光路数据结束')
+        print('查询分光器ID开始')
+        Swimming_Pool(Query_FS_ID, List_Box_Data)
+        print('查询分光器ID结束')
 
     if P1_Push_Box:
         print('P1-开始')
@@ -793,17 +806,17 @@ def Main_Process(Para_File_Name):
         print('P3-结束')
     if P4_Cable_Lay:
         print('P4-开始')
-        Swimming_Pool(Cable_Lay, List_CS_Data)
+        Swimming_Pool(Execute_Cable_Lay, List_CS_Data)
         print('P4-结束')
     if P5_Generate_ODM_and_Tray:
         print('P5-开始')
-        Swimming_Pool(Generate_ODM, List_Box_Data)
-        Swimming_Pool(Generate_Tray, List_Box_Data)
+        Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
+        Swimming_Pool(Execute_Generate_Tray, List_Box_Data)
         print('P5-结束')
     if P6_Termination_and_Direct_Melt:
         print('P6-开始')
-        Swimming_Pool(Termination, List_Box_Data)
-        Swimming_Pool(Direct_Melt, List_Box_Data)
+        Swimming_Pool(Execute_Termination, List_Box_Data)
+        Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
         print('P6-结束')
     if P7_Generate_Optical_Circut:
         print('P7-开始')
