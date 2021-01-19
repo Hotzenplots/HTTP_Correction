@@ -2,6 +2,7 @@ import csv
 import math
 import requests
 import copy
+import json
 from urllib import parse
 from lxml import etree
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +30,11 @@ P4_Cable_Lay                   = False
 P5_Generate_ODM_and_Tray       = False
 P6_Termination_and_Direct_Melt = False
 P7_Generate_Optical_Circut     = True
+
+def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
+    with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
+        Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
+
 
 def Generate_Local_Data(Para_File_Name):
     '''读取本地数据,在不查询的前提下填充几个List'''
@@ -158,9 +164,9 @@ def Generate_Local_Data(Para_File_Name):
     for each_7013_line in List_7013: 
         if each_7013_line[10] == '二级':
             List_OC_Data.append(dict({
-                'Z_FS_Name': each_7013_line[11],
+                'Z_POS_Name': each_7013_line[11],
                 'Z_Box_Name':  each_7013_line[3],
-                'A_FS_Name': each_7013_line[8],
+                'A_POS_Name': each_7013_line[8],
                 'City_ID': List_Template_Selected[16],
                 'County_ID': List_Template_Selected[1],
                 'Business_Name': Task_Name_ID_List[1],
@@ -187,7 +193,7 @@ def Generate_Local_Data(Para_File_Name):
                 }))
     for each_oc_data in List_OC_Data:
         for each_7013_line in List_7013:
-            if each_oc_data['A_FS_Name'] == each_7013_line[11]: # 中文名称 each_7013_line[2] # 资管中文名称
+            if each_oc_data['A_POS_Name'] == each_7013_line[11]: # 中文名称 each_7013_line[2] # 资管中文名称
                 each_oc_data['A_Box_Name'] = each_7013_line[3]
         if each_oc_data['A_Box_Name'] == each_oc_data['Z_Box_Name']:
             each_oc_data['BussType'] = 402
@@ -201,6 +207,152 @@ def Generate_Local_Data(Para_File_Name):
                 each_oc_data['Z_Box_Type'] = each_box_data['Box_Type']
                 each_oc_data['Z_Box_Type_ID'] = each_box_data['Box_Type_ID']
                 each_oc_data['Z_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
+
+def Generate_Topology():
+    global CS_Topology
+    CS_Topology = []
+    Line_Num = 0
+    Segment_Num = 0
+    for cable_seg_num in range(len(List_CS_Data)):
+        if cable_seg_num == 0:
+            CS_Topology.append([List_CS_Data[cable_seg_num]['A_Box_Name']])
+            CS_Topology[cable_seg_num].append(List_CS_Data[cable_seg_num]['Z_Box_Name'])
+            Segment_Num += 1
+            continue
+        if List_CS_Data[cable_seg_num]['A_Box_Name'] == CS_Topology[Line_Num][Segment_Num]:
+            CS_Topology[Line_Num].append(List_CS_Data[cable_seg_num]['Z_Box_Name'])
+            Segment_Num += 1
+            continue
+        else:
+            CS_Topology.append([List_CS_Data[cable_seg_num]['A_Box_Name']])
+            Line_Num += 1
+            Segment_Num = 1
+            CS_Topology[Line_Num].append(List_CS_Data[cable_seg_num]['Z_Box_Name'])
+
+def Generate_FS_Data():
+    #filled by 0
+    for box_info in List_Box_Data:
+        box_info['1FS_Count'] = 0
+        box_info['2FS_Count'] = 0
+        box_info['DL_2FS_Count'] = 0
+        box_info['ODM_Rows'] = 0
+        box_info['Tray_Count'] = 0
+    #1fs_count&2fs_count
+    for row in List_7013:
+        for box_info in List_Box_Data:
+            if row[3] == box_info['Box_Name']:
+                if row[10] == '一级':
+                    box_info['1FS_Count'] += 1
+                elif row[10] == '二级':
+                    box_info['2FS_Count'] += 1
+    #dl_2fs_count
+    for cable_num in range(len(CS_Topology) - 1, -1, -1):
+        for cable_seg_num in range(len(CS_Topology[cable_num]) - 1, -1, -1):
+            if cable_seg_num == len(CS_Topology[cable_num]) - 1:#Tail
+                for box_info in List_Box_Data: 
+                    if CS_Topology[cable_num][cable_seg_num] == box_info['Box_Name']:
+                        box_info['DL_2FS_Count'] = 0
+            elif cable_seg_num == 0:#Head
+                for box_info in List_Box_Data:
+                    if CS_Topology[cable_num][cable_seg_num] == box_info['Box_Name']:
+                        box_info['DL_2FS_Count'] = 0
+            else:#Middle
+                for box_info in List_Box_Data:
+                    if CS_Topology[cable_num][cable_seg_num + 1] == box_info['Box_Name']:
+                        DL_2FS_Count_temp = box_info['2FS_Count'] + box_info['DL_2FS_Count']
+                for box_info in List_Box_Data:
+                    if CS_Topology[cable_num][cable_seg_num] == box_info['Box_Name']:
+                        box_info['DL_2FS_Count'] = DL_2FS_Count_temp
+    #dl_2fs_count 1fs_box_correction
+    for box_info in List_Box_Data:
+        if box_info['1FS_Count'] != 0:
+            DL_2FS_Count_temp = []
+            for cable_num in CS_Topology:
+                if box_info['Box_Name'] == cable_num[0]:
+                    for  box_info_2 in List_Box_Data:
+                        if cable_num[1] == box_info_2['Box_Name']:
+                            DL_2FS_Count_temp.append(str(box_info_2['DL_2FS_Count'] + box_info_2['2FS_Count']))
+                            box_info['DL_2FS_Count'] = '&'.join(DL_2FS_Count_temp)
+    #ODM_Rows$Tray_Count
+    for box_info in List_Box_Data:
+        if box_info['1FS_Count'] == 0:
+            for cable_seg_data in List_CS_Data:
+                if box_info['Box_Name'] == cable_seg_data['Z_Box_Name']:
+                    box_info['ODM_Rows'] = box_info['Tray_Count'] = math.ceil(cable_seg_data['Width'] / 12)
+        elif box_info['1FS_Count'] != 0:
+            for cable_seg_data in List_CS_Data:
+                if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
+                    box_info['ODM_Rows'] = box_info['Tray_Count'] = math.ceil(cable_seg_data['Width'] / 12) + box_info['ODM_Rows']
+
+def Generate_Termination_and_Direct_Melt_Data():
+    for box_info in List_Box_Data:
+        if box_info['1FS_Count'] == 0:
+            for cable_seg_data in List_CS_Data:
+                if box_info['Box_Name'] == cable_seg_data['Z_Box_Name']:
+                    if cable_seg_data['Width'] >= (box_info['2FS_Count'] * 3 + box_info['DL_2FS_Count'] * 3):
+                        box_info['BackUp_Fiber_Count'] = 2
+                    elif (cable_seg_data['Width'] < (box_info['2FS_Count'] * 3 + box_info['DL_2FS_Count'] * 3)) and (cable_seg_data['Width'] >= (box_info['2FS_Count'] * 2 + box_info['DL_2FS_Count'] * 2)):
+                        box_info['BackUp_Fiber_Count'] = 1
+                    else:
+                        box_info['BackUp_Fiber_Count'] = 0
+            box_info['Termination_Start'] = 1
+            box_info['Termination_Count'] = box_info['2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1)
+            box_info['Direct_Melt_Start'] = box_info['2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1) + 1
+            box_info['Direct_Melt_Count'] = box_info['DL_2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1)
+            if box_info['Direct_Melt_Count'] == 0: #尾箱没有直熔数据
+                box_info['Direct_Melt_Start'] = 0
+        elif box_info['1FS_Count'] != 0:
+
+            List_Width = []
+            for cable_seg_data in List_CS_Data:
+                if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
+                    List_Width.append(cable_seg_data['Width'])
+
+            List_DL_2FS = box_info['DL_2FS_Count'].split('&')
+            box_info['BackUp_Fiber_Count'] = []
+            box_info['Termination_Start'] = []
+            box_info['Termination_Count'] = []
+            box_info['Direct_Melt_Start'] = []
+            box_info['Direct_Melt_Count'] = []
+
+            for each_DL_2FS, each_Width in zip(List_DL_2FS, List_Width):
+                if each_Width >= (box_info['2FS_Count'] * 3 + int(each_DL_2FS) * 3):
+                    box_info['BackUp_Fiber_Count'].append(2)
+                elif (each_Width < (box_info['2FS_Count'] * 3 + int(each_DL_2FS) * 3)) and (each_Width >= (box_info['2FS_Count'] * 2 + int(each_DL_2FS) * 2)):
+                    box_info['BackUp_Fiber_Count'].append(1)
+                else:
+                    box_info['BackUp_Fiber_Count'].append(0)
+            
+            for each_BackUp_Fiber_Count, each_DL_2FS in zip(box_info['BackUp_Fiber_Count'], List_DL_2FS):
+                box_info['Termination_Start'].append(1)
+                box_info['Termination_Count'].append(int(each_DL_2FS) * (int(each_BackUp_Fiber_Count) + 1))
+                box_info['Direct_Melt_Start'] = '0'
+                box_info['Direct_Melt_Count'] = '0'
+            
+            box_info['BackUp_Fiber_Count'] = [str(i) for i in box_info['BackUp_Fiber_Count']]
+            box_info['Termination_Start'] = [str(i) for i in box_info['Termination_Start']]
+            box_info['Termination_Count'] = [str(i) for i in box_info['Termination_Count']]
+            box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
+            box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
+
+            box_info['BackUp_Fiber_Count'] = '&'.join(box_info['BackUp_Fiber_Count'])
+            box_info['Termination_Start'] = '&'.join(box_info['Termination_Start'])
+            box_info['Termination_Count'] = '&'.join(box_info['Termination_Count'])
+            box_info['Direct_Melt_Start'] = '&'.join(box_info['Direct_Melt_Start'])
+            box_info['Direct_Melt_Count'] = '&'.join(box_info['Direct_Melt_Count'])
+
+def Generate_OC_POS_Data():
+    for each_oc_data in List_OC_Data:
+        for each_box_data in List_Box_Data:
+            if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
+                for keykey, valuevalue in each_box_data['POS'].items():
+                    if each_oc_data['A_POS_Name'] == keykey:
+                        each_oc_data['A_POS_ID'] = valuevalue
+            if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
+                for keykey, valuevalue in each_box_data['POS'].items():
+                    if each_oc_data['Z_POS_Name'] == keykey:
+                        each_oc_data['Z_POS_ID'] = valuevalue
+
 
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
@@ -331,72 +483,23 @@ def Query_Support_Sys_and_Cable_Sys():
             ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
         print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
-def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
-    with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
-        Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
-
-def Get_JSESSIONIRMS_and_route():
+def Query_JSESSIONIRMS_and_route():
     Browser_Obj = webdriver.Ie()
     Browser_Obj.get(r'http://portal.sx.cmcc/sxmcc_was/uploadResource/public/login/login.html')
     Browser_Obj.find_element_by_id('username').send_keys('tyyangwei')
     Browser_Obj.find_element_by_id('password').send_keys('tyyw789...')
     Browser_Obj.find_element_by_class_name('lwb_login').click()
-    sleep(2)
+    sleep(5)
     Browser_Obj.get(r'http://portal.sx.cmcc/sxmcc_wcm/middelwebpage/app_recoder_log.jsp?app_flg=zhwlzygl_ywzl')
-    sleep(2)
+    sleep(5)
     Dic_Cookie_JSESSIONIRMS = Browser_Obj.get_cookie('JSESSIONIRMS')
     Dic_Cookie_route = Browser_Obj.get_cookie('route')
     JSESSIONIRMS_Value = Dic_Cookie_JSESSIONIRMS['value']
     route_Value = Dic_Cookie_route['value']
     Browser_Obj.quit()
-    return [JSESSIONIRMS_Value, route_Value]
-
-def Push_Box(Para_List_Box_Data):
-    URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/SynchroController/synchroData?sid=' + str(Para_List_Box_Data['Box_ID']) + '&sType=' + str(Para_List_Box_Data['Box_Type']) + '&longi='+str(Para_List_Box_Data['Longitude']) + '&lati=' + str(Para_List_Box_Data['Latitude'])
-    Request_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded"}
-    Response_Body = requests.post(URL_Push_Box, headers=Request_Header)
-    Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
-    Push_Result = Response_Body.xpath('//message/text()')
-    print('P1-{}-{}'.format(Para_List_Box_Data['Box_Name'], Push_Result[0]))
-
-def Generate_Support_Segment():
-    URL_Generate_Support_Segment = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesAdd'
-    Form_Info_Head = '<xmldata mode="PipeLineAddMode"><mc type="yinshangduan">'
-    Form_Info_Tail = '</mc></xmldata>'
-    List_Form_Info_Body = []
-    for ocs_num in List_CS_Data:
-        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Support_Sys_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="INT_ID" v="new-27991311"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="PROJECT_CODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="RESOURCE_LOCATION" v="'+str(ocs_num['Field_Type'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="SYSTEM_LEVEL" v="'+str(ocs_num['Business_Level'])+'"/></mo>'
-        List_Form_Info_Body.append(Form_Info_Body)
-    Form_Info_Body = ''.join(List_Form_Info_Body)
-    Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
-    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
-    Request_Lenth = chr(len(Form_Info_Encoded))
-    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Generate_Support_Segment, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
-    List_Generate_Support_Segment_State = Response_Body.xpath('//@loaded')
-    print('P2-引上段建立-{}'.format(List_Generate_Support_Segment_State[0]))
-
-def Generate_Cable_Segment():
-    URL_Generate_Cable_Segment = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesAdd?coreNamingRules=0'
-    Form_Info_Head = '<xmldata mode="FibersegAddMode"><mc type="guanglanduan">'
-    Form_Info_Tail = '</mc></xmldata>'
-    List_Form_Info_Body = []
-    for ocs_num in List_CS_Data:
-        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Cable_Sys_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点'+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="FIBER_TYPE" v="2"/><fv k="INT_ID" v="new-27991311"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="FIBER_NUM" v="'+str(ocs_num['Width'])+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="WIRE_SEG_TYPE" v="GYTA-'+str(ocs_num['Width'])+'"/><fv k="SERVICE_LEVEL" v="14"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="PROJECTCODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/></mo>'
-        List_Form_Info_Body.append(Form_Info_Body)
-    Form_Info_Body = ''.join(List_Form_Info_Body)
-    Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
-    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
-    Request_Lenth = chr(len(Form_Info_Encoded))
-    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Generate_Cable_Segment, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
-    List_Generate_Cable_Segment_State = Response_Body.xpath('//@loaded')
-    print('P3-光缆段建立-{}'.format(List_Generate_Cable_Segment_State[0]))
+    global Jsessionirms_v, route_v
+    Jsessionirms_v = JSESSIONIRMS_Value
+    route_v = route_Value
 
 def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     List_CS_Support_Seg_Name_ID_Cable_Name_ID = {}
@@ -429,82 +532,6 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
             cable_seg['Support_Seg_ID'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_ID']
             cable_seg['Cable_Seg_Name'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_Name']
             cable_seg['Cable_Seg_ID'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID']
-
-def Generate_Topology():
-    global CS_Topology
-    CS_Topology = []
-    Line_Num = 0
-    Segment_Num = 0
-    for cable_seg_num in range(len(List_CS_Data)):
-        if cable_seg_num == 0:
-            CS_Topology.append([List_CS_Data[cable_seg_num]['A_Box_Name']])
-            CS_Topology[cable_seg_num].append(List_CS_Data[cable_seg_num]['Z_Box_Name'])
-            Segment_Num += 1
-            continue
-        if List_CS_Data[cable_seg_num]['A_Box_Name'] == CS_Topology[Line_Num][Segment_Num]:
-            CS_Topology[Line_Num].append(List_CS_Data[cable_seg_num]['Z_Box_Name'])
-            Segment_Num += 1
-            continue
-        else:
-            CS_Topology.append([List_CS_Data[cable_seg_num]['A_Box_Name']])
-            Line_Num += 1
-            Segment_Num = 1
-            CS_Topology[Line_Num].append(List_CS_Data[cable_seg_num]['Z_Box_Name'])
-
-def Generate_FS_Data():
-    #filled by 0
-    for box_info in List_Box_Data:
-        box_info['1FS_Count'] = 0
-        box_info['2FS_Count'] = 0
-        box_info['DL_2FS_Count'] = 0
-        box_info['ODM_Rows'] = 0
-        box_info['Tray_Count'] = 0
-    #1fs_count&2fs_count
-    for row in List_7013:
-        for box_info in List_Box_Data:
-            if row[3] == box_info['Box_Name']:
-                if row[10] == '一级':
-                    box_info['1FS_Count'] += 1
-                elif row[10] == '二级':
-                    box_info['2FS_Count'] += 1
-    #dl_2fs_count
-    for cable_num in range(len(CS_Topology) - 1, -1, -1):
-        for cable_seg_num in range(len(CS_Topology[cable_num]) - 1, -1, -1):
-            if cable_seg_num == len(CS_Topology[cable_num]) - 1:#Tail
-                for box_info in List_Box_Data: 
-                    if CS_Topology[cable_num][cable_seg_num] == box_info['Box_Name']:
-                        box_info['DL_2FS_Count'] = 0
-            elif cable_seg_num == 0:#Head
-                for box_info in List_Box_Data:
-                    if CS_Topology[cable_num][cable_seg_num] == box_info['Box_Name']:
-                        box_info['DL_2FS_Count'] = 0
-            else:#Middle
-                for box_info in List_Box_Data:
-                    if CS_Topology[cable_num][cable_seg_num + 1] == box_info['Box_Name']:
-                        DL_2FS_Count_temp = box_info['2FS_Count'] + box_info['DL_2FS_Count']
-                for box_info in List_Box_Data:
-                    if CS_Topology[cable_num][cable_seg_num] == box_info['Box_Name']:
-                        box_info['DL_2FS_Count'] = DL_2FS_Count_temp
-    #dl_2fs_count 1fs_box_correction
-    for box_info in List_Box_Data:
-        if box_info['1FS_Count'] != 0:
-            DL_2FS_Count_temp = []
-            for cable_num in CS_Topology:
-                if box_info['Box_Name'] == cable_num[0]:
-                    for  box_info_2 in List_Box_Data:
-                        if cable_num[1] == box_info_2['Box_Name']:
-                            DL_2FS_Count_temp.append(str(box_info_2['DL_2FS_Count'] + box_info_2['2FS_Count']))
-                            box_info['DL_2FS_Count'] = '&'.join(DL_2FS_Count_temp)
-    #ODM_Rows$Tray_Count
-    for box_info in List_Box_Data:
-        if box_info['1FS_Count'] == 0:
-            for cable_seg_data in List_CS_Data:
-                if box_info['Box_Name'] == cable_seg_data['Z_Box_Name']:
-                    box_info['ODM_Rows'] = box_info['Tray_Count'] = math.ceil(cable_seg_data['Width'] / 12)
-        elif box_info['1FS_Count'] != 0:
-            for cable_seg_data in List_CS_Data:
-                if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
-                    box_info['ODM_Rows'] = box_info['Tray_Count'] = math.ceil(cable_seg_data['Width'] / 12) + box_info['ODM_Rows']
 
 def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
     URL_Query_ODM_ID_and_Terminarl_IDs = 'http://10.209.199.74:8120/nxapp/room/queryShelfAndModuleData.ilf'
@@ -539,62 +566,79 @@ def Query_CS_Fiber_IDs(Para_List_CS_Data):
     List_CS_Fiber_IDs.pop(0)
     Para_List_CS_Data['CS_Fiber_IDs'] = '&'.join(List_CS_Fiber_IDs)
 
-def Generate_Termination_and_Direct_Melt_Data():
-    for box_info in List_Box_Data:
-        if box_info['1FS_Count'] == 0:
-            for cable_seg_data in List_CS_Data:
-                if box_info['Box_Name'] == cable_seg_data['Z_Box_Name']:
-                    if cable_seg_data['Width'] >= (box_info['2FS_Count'] * 3 + box_info['DL_2FS_Count'] * 3):
-                        box_info['BackUp_Fiber_Count'] = 2
-                    elif (cable_seg_data['Width'] < (box_info['2FS_Count'] * 3 + box_info['DL_2FS_Count'] * 3)) and (cable_seg_data['Width'] >= (box_info['2FS_Count'] * 2 + box_info['DL_2FS_Count'] * 2)):
-                        box_info['BackUp_Fiber_Count'] = 1
-                    else:
-                        box_info['BackUp_Fiber_Count'] = 0
-            box_info['Termination_Start'] = 1
-            box_info['Termination_Count'] = box_info['2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1)
-            box_info['Direct_Melt_Start'] = box_info['2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1) + 1
-            box_info['Direct_Melt_Count'] = box_info['DL_2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1)
-            if box_info['Direct_Melt_Count'] == 0: #尾箱没有直熔数据
-                box_info['Direct_Melt_Start'] = 0
-        elif box_info['1FS_Count'] != 0:
+def Query_POS_ID(Para_List_Box_Data):
+    URL_Query_POS_ID = 'http://10.209.199.72:7112/irms/opticOpenApplyAction!queryEqu.ilf'
+    Form_Info_Encoded = 'equType=POS&countyId=' + str(Para_List_Box_Data['County_ID']) + '&siteId=' + str(Para_List_Box_Data['ResPoint_ID']) + '&sitetype=' + str(Para_List_Box_Data['ResPoint_Type_ID']) + '&sitename=' + parse.quote_plus(Para_List_Box_Data['ResPoint_Name']) + '&cityId=' + str(Para_List_Box_Data['City_ID'])
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+    # Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': 'Cb15gGLSqLh2fbGDx9j8TVKfphF25YmQnN7h6JVyxnL7lFGg7Nvn!418505528', 'route': '5fb592aa37b5606b0629ebaa738ace15'})
+    Response_Body = Response_Body.text
+    Response_Body = Response_Body.replace('success:true','"success":true')
+    Response_Body = Response_Body.replace('totalProperty','"totalProperty"')
+    Response_Body = Response_Body.replace('data','"data"')
+    Response_Body = Response_Body.replace('int_id','"int_id"')
+    Response_Body = Response_Body.replace('endEquipType','"endEquipType"')
+    Response_Body = Response_Body.replace('trans_site_type','"trans_site_type"')
+    Response_Body = Response_Body.replace('trans_site_id','"trans_site_id"')
+    Response_Body = Response_Body.replace('trans_site_name','"trans_site_name"')
+    Response_Body = Response_Body.replace('zh_label','"zh_label"')
+    Response_Body = Response_Body.replace('\'','\"')
+    Response_Body =json.loads(Response_Body)
+    List_POS_Name = []
+    List_POS_ID = []
+    for each_POS_data in Response_Body['data']:
+        List_POS_Name.append(each_POS_data['zh_label'])
+        List_POS_ID.append(each_POS_data['int_id'])
+    Para_List_Box_Data['POS'] = dict(zip(List_POS_Name, List_POS_ID))
 
-            List_Width = []
-            for cable_seg_data in List_CS_Data:
-                if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
-                    List_Width.append(cable_seg_data['Width'])
 
-            List_DL_2FS = box_info['DL_2FS_Count'].split('&')
-            box_info['BackUp_Fiber_Count'] = []
-            box_info['Termination_Start'] = []
-            box_info['Termination_Count'] = []
-            box_info['Direct_Melt_Start'] = []
-            box_info['Direct_Melt_Count'] = []
+def Execute_Push_Box(Para_List_Box_Data):
+    URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/SynchroController/synchroData?sid=' + str(Para_List_Box_Data['Box_ID']) + '&sType=' + str(Para_List_Box_Data['Box_Type']) + '&longi='+str(Para_List_Box_Data['Longitude']) + '&lati=' + str(Para_List_Box_Data['Latitude'])
+    Request_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded"}
+    Response_Body = requests.post(URL_Push_Box, headers=Request_Header)
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    Push_Result = Response_Body.xpath('//message/text()')
+    print('P1-{}-{}'.format(Para_List_Box_Data['Box_Name'], Push_Result[0]))
 
-            for each_DL_2FS, each_Width in zip(List_DL_2FS, List_Width):
-                if each_Width >= (box_info['2FS_Count'] * 3 + int(each_DL_2FS) * 3):
-                    box_info['BackUp_Fiber_Count'].append(2)
-                elif (each_Width < (box_info['2FS_Count'] * 3 + int(each_DL_2FS) * 3)) and (each_Width >= (box_info['2FS_Count'] * 2 + int(each_DL_2FS) * 2)):
-                    box_info['BackUp_Fiber_Count'].append(1)
-                else:
-                    box_info['BackUp_Fiber_Count'].append(0)
-            
-            for each_BackUp_Fiber_Count, each_DL_2FS in zip(box_info['BackUp_Fiber_Count'], List_DL_2FS):
-                box_info['Termination_Start'].append(1)
-                box_info['Termination_Count'].append(int(each_DL_2FS) * (int(each_BackUp_Fiber_Count) + 1))
-                box_info['Direct_Melt_Start'] = '0'
-                box_info['Direct_Melt_Count'] = '0'
-            
-            box_info['BackUp_Fiber_Count'] = [str(i) for i in box_info['BackUp_Fiber_Count']]
-            box_info['Termination_Start'] = [str(i) for i in box_info['Termination_Start']]
-            box_info['Termination_Count'] = [str(i) for i in box_info['Termination_Count']]
-            box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
-            box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
+def Execute_Generate_Support_Segment():
+    URL_Generate_Support_Segment = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesAdd'
+    Form_Info_Head = '<xmldata mode="PipeLineAddMode"><mc type="yinshangduan">'
+    Form_Info_Tail = '</mc></xmldata>'
+    List_Form_Info_Body = []
+    for ocs_num in List_CS_Data:
+        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Support_Sys_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="INT_ID" v="new-27991311"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="PROJECT_CODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="RESOURCE_LOCATION" v="'+str(ocs_num['Field_Type'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="SYSTEM_LEVEL" v="'+str(ocs_num['Business_Level'])+'"/></mo>'
+        List_Form_Info_Body.append(Form_Info_Body)
+    Form_Info_Body = ''.join(List_Form_Info_Body)
+    Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
+    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Generate_Support_Segment, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_Generate_Support_Segment_State = Response_Body.xpath('//@loaded')
+    print('P2-引上段建立-{}'.format(List_Generate_Support_Segment_State[0]))
 
-            box_info['BackUp_Fiber_Count'] = '&'.join(box_info['BackUp_Fiber_Count'])
-            box_info['Termination_Start'] = '&'.join(box_info['Termination_Start'])
-            box_info['Termination_Count'] = '&'.join(box_info['Termination_Count'])
-            box_info['Direct_Melt_Start'] = '&'.join(box_info['Direct_Melt_Start'])
-            box_info['Direct_Melt_Count'] = '&'.join(box_info['Direct_Melt_Count'])
+def Execute_Generate_Cable_Segment():
+    URL_Generate_Cable_Segment = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesAdd?coreNamingRules=0'
+    Form_Info_Head = '<xmldata mode="FibersegAddMode"><mc type="guanglanduan">'
+    Form_Info_Tail = '</mc></xmldata>'
+    List_Form_Info_Body = []
+    for ocs_num in List_CS_Data:
+        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Cable_Sys_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点'+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="FIBER_TYPE" v="2"/><fv k="INT_ID" v="new-27991311"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="FIBER_NUM" v="'+str(ocs_num['Width'])+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="WIRE_SEG_TYPE" v="GYTA-'+str(ocs_num['Width'])+'"/><fv k="SERVICE_LEVEL" v="14"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="PROJECTCODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/></mo>'
+        List_Form_Info_Body.append(Form_Info_Body)
+    Form_Info_Body = ''.join(List_Form_Info_Body)
+    Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
+    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Request_Lenth = chr(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Generate_Cable_Segment, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_Generate_Cable_Segment_State = Response_Body.xpath('//@loaded')
+    print('P3-光缆段建立-{}'.format(List_Generate_Cable_Segment_State[0]))
 
 def Execute_Cable_Lay(Para_List_CS_Data):
     URL_Cable_Lay = 'http://10.209.199.74:8120/igisserver_osl/rest/optCabLayInspur/saveFiberSegM1'
@@ -742,8 +786,6 @@ def Execute_Direct_Melt(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         print('P6-{}-是一级分纤箱,不涉及直熔'.format(Para_List_Box_Data['Box_Name']))
 
-def Query_FS_ID():
-    ...
 
 def Main_Process(Para_File_Name):
     Generate_Local_Data(Para_File_Name)
@@ -754,26 +796,26 @@ def Main_Process(Para_File_Name):
         P5_Generate_ODM_and_Tray or 
         P6_Termination_and_Direct_Melt or 
         P7_Generate_Optical_Circut):
-        print('查询分纤箱数据开始')
+        print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
-        print('查询分纤箱数据结束')
+        print('查询Box/ResPoint结束')
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
         P4_Cable_Lay or 
         P5_Generate_ODM_and_Tray or 
         P6_Termination_and_Direct_Melt):
-        print('查询引上系统/光缆系统ID')
+        print('查询Support_Sys_ID/Cable_Sys_ID')
         Query_Support_Sys_and_Cable_Sys()
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
         P7_Generate_Optical_Circut):
-        print('查询项目编号ID')
+        print('查询Project_Code_ID')
         Query_Project_Code_ID()
     if (P4_Cable_Lay or 
         P6_Termination_and_Direct_Melt):
-        print('查询引上段/光缆段ID开始')
+        print('查询Support_Seg_ID/Cable_Seg_ID开始')
         Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
-        print('查询引上段/光缆段ID结束')
+        print('查询Support_Seg_ID/Cable_Seg_ID结束')
     if (P5_Generate_ODM_and_Tray or 
         P6_Termination_and_Direct_Melt):
         Generate_Topology()
@@ -783,26 +825,29 @@ def Main_Process(Para_File_Name):
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             print('查询ODM_ID结束')
     if P6_Termination_and_Direct_Melt:
-        print('查询光缆纤芯ID开始')
+        print('查询Cable_Fiber_ID开始')
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         Generate_Termination_and_Direct_Melt_Data()
-        print('查询光缆纤芯ID结束')
+        print('查询Cable_Fiber_ID结束')
     if P7_Generate_Optical_Circut:
-        print('查询分光器ID开始')
-        Swimming_Pool(Query_FS_ID, List_Box_Data)
-        print('查询分光器ID结束')
+        print('查询POS_ID开始')
+        Query_JSESSIONIRMS_and_route()
+        Swimming_Pool(Query_POS_ID, List_Box_Data)
+        Generate_OC_POS_Data()
+        print('查询POS_ID结束')
+
 
     if P1_Push_Box:
         print('P1-开始')
-        Swimming_Pool(Push_Box, List_Box_Data)
+        Swimming_Pool(Execute_Push_Box, List_Box_Data)
         print('P1-结束')
     if P2_Generate_Support_Segment:
         print('P2-开始')
-        Generate_Support_Segment()
+        Execute_Generate_Support_Segment()
         print('P2-结束')
     if P3_Generate_Cable_Segment:
         print('P3-开始')
-        Generate_Cable_Segment()
+        Execute_Generate_Cable_Segment()
         print('P3-结束')
     if P4_Cable_Lay:
         print('P4-开始')
@@ -829,7 +874,16 @@ def Main_Process(Para_File_Name):
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
-    # print(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+    print()
+    test_dic = {'Box_Name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'Longitude': 112.715537063552, 'Latitude': 38.1584514963058, 'Box_Type': 'guangfenxianxiang', 'Box_Type_ID': 9204, 'ResPoint_Type_ID': 9115, 'City_ID': 445835190, 'County_ID': 445835318, 'Box_ID': '730421268', 'ResPoint_ID': '730421348', 'Alias': '太原阳曲县山西豪德置业有限公司企业宽带4-7#东楼道8号一级分纤箱GF0001', 'ResPoint_Name': '太原阳曲县山西豪德置业有限公司企业宽带4-7#东楼道8号一级分纤箱GF0001资源点', 'Project_Code_ID': '54487'}
 
-    print(List_OC_Data[0])
-    print(List_OC_Data[1])
+    # Query_JSESSIONIRMS_and_route()
+    # Query_POS_ID(test_dic)
+    # print(List_Box_Data[5])
+    # print(List_Box_Data[6])
+    # print(List_OC_Data[1])
+    test_dic2 = {'success': True, 'totalProperty': 3, 'data': [{'int_id': '730861623', 'endEquipType': '', 'trans_site_type': '', 'trans_site_id': '730421268', 'trans_site_name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'zh_label': '太原阳曲县山西豪德置业有限公司企业宽带4-7#东楼道8号一级分光器'}, {'int_id': '730861571', 'endEquipType': '', 'trans_site_type': '', 'trans_site_id': '730421268', 'trans_site_name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'zh_label': '太原阳曲县山西豪德置业有限公司企业宽带5-7#东楼道10号一级分光器'}, {'int_id': '730861595', 'endEquipType': '', 'trans_site_type': '', 'trans_site_id': '730421268', 'trans_site_name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'zh_label': '太原阳曲县山西豪德置业有限公司企业宽带5-7#西楼道9号一级分光器'}]}
+
+    # print(test_dic2['data'][1])
+    for each_box_data in List_Box_Data:
+        print(each_box_data['POS'])
