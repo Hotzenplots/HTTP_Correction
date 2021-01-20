@@ -515,6 +515,8 @@ def Query_JSESSIONIRMS_and_route():
     global Jsessionirms_v, route_v
     Jsessionirms_v = JSESSIONIRMS_Value
     route_v = route_Value
+    print('JSESSIONIRMS: ' + Jsessionirms_v)
+    print('route: ' + route_v)
 
 def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     List_CS_Support_Seg_Name_ID_Cable_Name_ID = {}
@@ -587,7 +589,6 @@ def Query_POS_ID(Para_List_Box_Data):
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
-    # Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': 'Cb15gGLSqLh2fbGDx9j8TVKfphF25YmQnN7h6JVyxnL7lFGg7Nvn!418505528', 'route': '5fb592aa37b5606b0629ebaa738ace15'})
     Response_Body = Response_Body.text
     Response_Body = Response_Body.replace('success:true','"success":true')
     Response_Body = Response_Body.replace('totalProperty','"totalProperty"')
@@ -611,7 +612,6 @@ def Query_Work_Sheet_ID():
     Work_Sheet_Count = math.ceil(len(List_OC_Data) / 40)
     for work_sheet_num in range(Work_Sheet_Count):
         Work_Sheet_Name = '关于' + List_OC_Data[0]['Business_Name'] + '二级光路申请yry' + '0' + str(work_sheet_num)
-        print(Work_Sheet_Name)
         Work_Sheet_Times = []
         Work_Sheet_Times.append(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         Work_Sheet_Times.append((datetime.datetime.now() + datetime.timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S'))
@@ -622,14 +622,12 @@ def Query_Work_Sheet_ID():
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Query_Work_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
-        # Response_Body = requests.post(URL_Query_Work_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': 'xfGJgLTFcNG4Hbhx12vg3pT1FMtdDLqVfgpt8R10H1vFnM63GFxh!-48630710', 'route': 'b7724c4ffeaf48382b8d4d099b73de2f'})
         Response_Body = Response_Body.text
         Response_Body = json.loads(Response_Body)
         Exist_Work_Sheet = Response_Body['totalCount']
         if Exist_Work_Sheet == 0: # Create
             URL_Create_New_Work_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/opticalSchedulingAction!init.ilf'
             Response_Body = requests.get(URL_Create_New_Work_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
-            # Response_Body = requests.get(URL_Create_New_Work_Sheet_Step_1, cookies={'JSESSIONIRMS': 'xfGJgLTFcNG4Hbhx12vg3pT1FMtdDLqVfgpt8R10H1vFnM63GFxh!-48630710', 'route': 'b7724c4ffeaf48382b8d4d099b73de2f'})
             Response_Body = bytes(Response_Body.text, encoding="utf-8")
             Response_Body = etree.HTML(Response_Body)
             List_Work_Sheet_Info = Response_Body.xpath('//input/@value')
@@ -638,15 +636,12 @@ def Query_Work_Sheet_ID():
             Request_Lenth = str(len(Form_Info_Encoded))
             Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
             Response_Body = requests.post(URL_Create_New_Work_Sheet_Step_2, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
-            # Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': 'Cb15gGLSqLh2fbGDx9j8TVKfphF25YmQnN7h6JVyxnL7lFGg7Nvn!418505528', 'route': '5fb592aa37b5606b0629ebaa738ace15'})
-            
             Repete_Start = (int(work_sheet_num) * 40)
             Repete_End = (int(work_sheet_num + 1) * 40)
             for oc_num in range(Repete_Start,Repete_End):
                 List_OC_Data[oc_num]['Pro_ID'] = List_Work_Sheet_Info[3]
                 if (oc_num + 1) == len(List_OC_Data):
                     break
-
         else:
             Repete_Start = (int(work_sheet_num) * 40)
             Repete_End = (int(work_sheet_num + 1) * 40)
@@ -897,6 +892,7 @@ def Main_Process(Para_File_Name):
         Query_JSESSIONIRMS_and_route()
         Swimming_Pool(Query_POS_ID, List_Box_Data)
         Generate_OC_POS_Data_and_OC_Name()
+        Query_Work_Sheet_ID()
         print('查询POS_ID结束')
 
 
@@ -932,17 +928,11 @@ def Main_Process(Para_File_Name):
 
 
 if __name__ == '__main__':
-    # for each_File_Name in File_Name:
-    #     Main_Process(each_File_Name)
+    for each_File_Name in File_Name:
+        Main_Process(each_File_Name)
 
-    # for each_oc_data in List_OC_Data:
-    #     print(each_oc_data['OC_Name'])
+    for each_oc_data in List_OC_Data:
+        print(each_oc_data['Pro_ID'])
 
     # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
 
-    Generate_Local_Data('豪德置业')
-    Query_JSESSIONIRMS_and_route()
-    Query_Work_Sheet_ID()
-
-
-    test001 = ['', '115501', '166', '1611142394539', '', '', '', '山西省太原市', '324', '', '0', '', '', '', 'glsq', 'SX-020-210120-195', '', '', '光路调度-210120-157', 'true', '', '杨伟', '13603516690', '工程建设部', 'Wed Jan 20 19:33:13 CST 2021', 'Fri Jan 22 19:33:13 CST 2021', 'Sun Jan 24 19:33:13 CST 2021', '', '附件上传', '提交']
