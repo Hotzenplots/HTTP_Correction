@@ -10,6 +10,7 @@ from datetime import datetime
 from openpyxl import load_workbook
 from selenium import webdriver
 from time import sleep
+from collections import Counter
 
 '''
 7013CSV是基础,除P1外都需要
@@ -34,7 +35,6 @@ P7_Generate_Optical_Circut     = True
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
         Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
-
 
 def Generate_Local_Data(Para_File_Name):
     '''读取本地数据,在不查询的前提下填充几个List'''
@@ -341,7 +341,8 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Direct_Melt_Start'] = '&'.join(box_info['Direct_Melt_Start'])
             box_info['Direct_Melt_Count'] = '&'.join(box_info['Direct_Melt_Count'])
 
-def Generate_OC_POS_Data():
+def Generate_OC_POS_Data_and_OC_Name():
+    List_OC_Name = []
     for each_oc_data in List_OC_Data:
         for each_box_data in List_Box_Data:
             if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
@@ -352,6 +353,20 @@ def Generate_OC_POS_Data():
                 for keykey, valuevalue in each_box_data['POS'].items():
                     if each_oc_data['Z_POS_Name'] == keykey:
                         each_oc_data['Z_POS_ID'] = valuevalue
+
+        each_oc_data['OC_Name'] = each_oc_data['A_Box_Name'] + '资源点' + '-' + each_oc_data['Z_Box_Name'] + '资源点' + 'F0001'
+        List_OC_Name.append(each_oc_data['OC_Name'])
+
+    Counter_OC_Name = Counter()
+    for oc_name in List_OC_Name:
+        Counter_OC_Name[oc_name] += 1
+
+    for keykey, valuevalue in Counter_OC_Name.items():
+        for increase_num in range(valuevalue):
+            for each_oc_data in List_OC_Data:
+                if each_oc_data['OC_Name'] == keykey:
+                    each_oc_data['OC_Name'] = each_oc_data['OC_Name'][:(len(each_oc_data['OC_Name']) - 4)] + '{:04d}'.format(int(each_oc_data['OC_Name'][(len(each_oc_data['OC_Name']) - 4):]) + int(increase_num))
+                    break
 
 
 def Query_Project_Code_ID():
@@ -591,6 +606,17 @@ def Query_POS_ID(Para_List_Box_Data):
         List_POS_Name.append(each_POS_data['zh_label'])
         List_POS_ID.append(each_POS_data['int_id'])
     Para_List_Box_Data['POS'] = dict(zip(List_POS_Name, List_POS_ID))
+
+def Query_Work_Sheet_ID():
+    Work_Sheet_Count = math.ceil(len(List_OC_Data) / 40)
+    for work_sheet_num in range(Work_Sheet_Count):
+        Work_Sheet_Name = '关于' + List_OC_Data[0]['Business_Name'] + '二级光路申请yry' + '0' + str(work_sheet_num)
+        print(Work_Sheet_Name)
+        Work_Sheet_Times = []
+        Work_Sheet_Times.append(datetime.now())
+        print(Work_Sheet_Times)
+
+
 
 
 def Execute_Push_Box(Para_List_Box_Data):
@@ -833,7 +859,7 @@ def Main_Process(Para_File_Name):
         print('查询POS_ID开始')
         Query_JSESSIONIRMS_and_route()
         Swimming_Pool(Query_POS_ID, List_Box_Data)
-        Generate_OC_POS_Data()
+        Generate_OC_POS_Data_and_OC_Name()
         print('查询POS_ID结束')
 
 
@@ -867,23 +893,15 @@ def Main_Process(Para_File_Name):
         print('P7-开始')
         print('P7-结束')
 
-    # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
-    # print(List_CS_Data[20])
-    # print(List_Box_Data[0])
 
 if __name__ == '__main__':
-    for each_File_Name in File_Name:
-        Main_Process(each_File_Name)
-    print()
-    test_dic = {'Box_Name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'Longitude': 112.715537063552, 'Latitude': 38.1584514963058, 'Box_Type': 'guangfenxianxiang', 'Box_Type_ID': 9204, 'ResPoint_Type_ID': 9115, 'City_ID': 445835190, 'County_ID': 445835318, 'Box_ID': '730421268', 'ResPoint_ID': '730421348', 'Alias': '太原阳曲县山西豪德置业有限公司企业宽带4-7#东楼道8号一级分纤箱GF0001', 'ResPoint_Name': '太原阳曲县山西豪德置业有限公司企业宽带4-7#东楼道8号一级分纤箱GF0001资源点', 'Project_Code_ID': '54487'}
+    # for each_File_Name in File_Name:
+    #     Main_Process(each_File_Name)
 
-    # Query_JSESSIONIRMS_and_route()
-    # Query_POS_ID(test_dic)
-    # print(List_Box_Data[5])
-    # print(List_Box_Data[6])
-    # print(List_OC_Data[1])
-    test_dic2 = {'success': True, 'totalProperty': 3, 'data': [{'int_id': '730861623', 'endEquipType': '', 'trans_site_type': '', 'trans_site_id': '730421268', 'trans_site_name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'zh_label': '太原阳曲县山西豪德置业有限公司企业宽带4-7#东楼道8号一级分光器'}, {'int_id': '730861571', 'endEquipType': '', 'trans_site_type': '', 'trans_site_id': '730421268', 'trans_site_name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'zh_label': '太原阳曲县山西豪德置业有限公司企业宽带5-7#东楼道10号一级分光器'}, {'int_id': '730861595', 'endEquipType': '', 'trans_site_type': '', 'trans_site_id': '730421268', 'trans_site_name': '太原阳曲县山西豪德置业有限公司企业宽带东楼道8号GF0086', 'zh_label': '太原阳曲县山西豪德置业有限公司企业宽带5-7#西楼道9号一级分光器'}]}
+    # for each_oc_data in List_OC_Data:
+    #     print(each_oc_data['OC_Name'])
 
-    # print(test_dic2['data'][1])
-    for each_box_data in List_Box_Data:
-        print(each_box_data['POS'])
+    # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
+
+    Generate_Local_Data('豪德置业')
+    Query_Work_Sheet_ID()
