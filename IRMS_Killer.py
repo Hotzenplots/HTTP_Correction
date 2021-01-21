@@ -16,7 +16,7 @@ from collections import Counter
 7013CSV是基础,除P1外都需要
 
 一级箱子DL_2FS_Count,可以考虑放弃使用&
-光路申请(含工单建立)
+8120跳纤
 提交工单(理想情况)
 光路设计
 工单号写入(含工单建立)
@@ -844,6 +844,24 @@ def Execute_Direct_Melt(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         print('P6-{}-是一级分纤箱,不涉及直熔'.format(Para_List_Box_Data['Box_Name']))
 
+def Execute_Generate_Optical_Circut(Para_List_OC_Data):
+    URL_Generate_Optical_Circut = 'http://10.209.199.72:7112/irms/opticOpenAction!saveOptictemp.ilf'
+    Form_Info_Encoded = 'proId=' + str(Para_List_OC_Data['Pro_ID']) + '&cityId=' + str(Para_List_OC_Data['City_ID']) + '&countyId=' + str(Para_List_OC_Data['County_ID']) + '&aportequname=' + parse.quote_plus(Para_List_OC_Data['A_Box_Name']) + '&aportequtype=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&aportequid=' + str(Para_List_OC_Data['A_Box_ID']) + '&asitename=' + parse.quote_plus(Para_List_OC_Data['A_ResPoint_Name']) + '&asitetype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '&asiteid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&aequname=' + parse.quote_plus(Para_List_OC_Data['A_POS_Name']) + '&aequid=' + str(Para_List_OC_Data['A_POS_ID']) + '&aequtype=' + str(Para_List_OC_Data['AEquType']) + '&ajoinName=' + parse.quote_plus(Para_List_OC_Data['AJoinName']) + '&zportequname=' + parse.quote_plus(Para_List_OC_Data['Z_Box_Name']) + '&zportequtype=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&zportequid=' + str(Para_List_OC_Data['Z_Box_ID']) + '&zsitename=' + parse.quote_plus(Para_List_OC_Data['Z_ResPoint_Name']) + '&zsitetype=' + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&zsiteid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&zequname=' + parse.quote_plus(Para_List_OC_Data['Z_POS_Name']) + '&zequid=' + str(Para_List_OC_Data['Z_POS_ID']) + '&zequtype=' + str(Para_List_OC_Data['ZEquType']) + '&zjoinName=' + parse.quote_plus(Para_List_OC_Data['ZJoinName']) + '&opticname=' + parse.quote_plus(Para_List_OC_Data['OC_Name']) + '&chengzaiyewu=' + parse.quote_plus(Para_List_OC_Data['Business_Name']) + '&sxbusstype=' + parse.quote_plus(Para_List_OC_Data['SXBussType']) + '&bakinfo=' + parse.quote_plus('无') + '&bussType=' + str(Para_List_OC_Data['BussType']) + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&serviceLevel=' + str(Para_List_OC_Data['ServiceLevel']) + '&fiberCount=' + str(Para_List_OC_Data['FiberCount']) + '&qualityGc=' + parse.quote_plus(Para_List_OC_Data['DQS_Project']) + '&qualityGcId=' + str(Para_List_OC_Data['DQS_Project_ID']) + '&qualityDs=' + parse.quote_plus(Para_List_OC_Data['DQS']) + '&qualityDsId=' + str(Para_List_OC_Data['DQS_ID']) + '&qualityQx=' + parse.quote_plus(Para_List_OC_Data['DQS_County']) + '&qualityQxId=' + str(Para_List_OC_Data['DQS_County_ID']) + '&maintain=' + parse.quote_plus(Para_List_OC_Data['DQS_Maintainer']) + '&maintainId=' + str(Para_List_OC_Data['DQS_Maintainer_ID']) + '&projectCodeName=' + parse.quote_plus(Para_List_OC_Data['Project_Code']) + '&projectCodeId=' + str(Para_List_OC_Data['Project_Code_ID']) + '&taskName=' + parse.quote_plus(Para_List_OC_Data['Task_Name']) + '&taskNameid=' + str(Para_List_OC_Data['Task_Name_ID'])
+    Request_Lenth = str(len(Form_Info_Encoded))
+    Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Generate_Optical_Circut, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+    Response_Body = Response_Body.text
+    Response_Body = Response_Body.replace('success:true','"success":true')
+    Response_Body = Response_Body.replace('mesg','"mesg"')
+    Response_Body = Response_Body.replace('lyxx','"lyxx"')
+    Response_Body = Response_Body.replace('lytypexx','"lytypexx"')
+    Response_Body = Response_Body.replace('workorder','"workorder"')
+    Response_Body = Response_Body.replace('\'','\"')
+    Response_Body = Response_Body.replace('x\"t','xt')
+    Response_Body = Response_Body.replace('r\"i','ri')
+    Response_Body = Response_Body.replace('\"\"','\"')
+    Response_Body = json.loads(Response_Body)
+    print('P7-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
 
 def Main_Process(Para_File_Name):
     Generate_Local_Data(Para_File_Name)
@@ -924,15 +942,10 @@ def Main_Process(Para_File_Name):
         print('P6-结束')
     if P7_Generate_Optical_Circut:
         print('P7-开始')
+        Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
         print('P7-结束')
 
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
-
-    for each_oc_data in List_OC_Data:
-        print(each_oc_data['Pro_ID'])
-
-    # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
-
