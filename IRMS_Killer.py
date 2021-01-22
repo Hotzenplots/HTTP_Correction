@@ -30,7 +30,8 @@ P3_Generate_Cable_Segment      = False
 P4_Cable_Lay                   = False
 P5_Generate_ODM_and_Tray       = False
 P6_Termination_and_Direct_Melt = False
-P7_Generate_Optical_Circut     = True
+P7_Generate_Jumper             = True
+P8_Generate_Optical_Circut     = False
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -608,6 +609,22 @@ def Query_POS_ID(Para_List_Box_Data):
         List_POS_ID.append(each_POS_data['int_id'])
     Para_List_Box_Data['POS'] = dict(zip(List_POS_Name, List_POS_ID))
 
+def Query_POS_Port_IDs(Para_List_Box_Data):
+    Para_List_Box_Data['POS_IDs'] = []
+    for keykey, valuevalue in Para_List_Box_Data['POS'].items():
+        URL_Query_POS_Port_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
+        Form_Info = '<params><param key="equ_type" value="pos"/><param key="equ_id" value="'+str(valuevalue)+'"/></params>'
+        Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
+        Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&lifeparams=" + parse.quote_plus(Form_Info_Tail)
+        Request_Lenth = str(len(Form_Info_Encoded))
+        Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+        Response_Body = requests.post(URL_Query_POS_Port_IDs, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+        Response_Body = bytes(Response_Body.text, encoding="utf-8")
+        Response_Body = etree.HTML(Response_Body)
+        List_POS_IDs = Response_Body.xpath('//@id')
+        List_POS_IDs.pop(0)
+        Para_List_Box_Data['POS_IDs'].append(List_POS_IDs)
+
 def Query_Work_Sheet_ID():
     Work_Sheet_Count = math.ceil(len(List_OC_Data) / 40)
     for work_sheet_num in range(Work_Sheet_Count):
@@ -871,7 +888,8 @@ def Main_Process(Para_File_Name):
         P4_Cable_Lay or 
         P5_Generate_ODM_and_Tray or 
         P6_Termination_and_Direct_Melt or 
-        P7_Generate_Optical_Circut):
+        P7_Generate_Jumper or 
+        P8_Generate_Optical_Circut):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
@@ -884,11 +902,13 @@ def Main_Process(Para_File_Name):
         Query_Support_Sys_and_Cable_Sys()
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
-        P7_Generate_Optical_Circut):
+        P7_Generate_Jumper or 
+        P8_Generate_Optical_Circut):
         print('查询Project_Code_ID')
         Query_Project_Code_ID()
     if (P4_Cable_Lay or 
-        P6_Termination_and_Direct_Melt):
+        P6_Termination_and_Direct_Melt or 
+        P7_Generate_Jumper):
         print('查询Support_Seg_ID/Cable_Seg_ID开始')
         Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
         print('查询Support_Seg_ID/Cable_Seg_ID结束')
@@ -901,17 +921,24 @@ def Main_Process(Para_File_Name):
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             print('查询ODM_ID结束')
     if P6_Termination_and_Direct_Melt:
+        Generate_Termination_and_Direct_Melt_Data()
+    if (P6_Termination_and_Direct_Melt or
+        P7_Generate_Jumper):
         print('查询Cable_Fiber_ID开始')
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-        Generate_Termination_and_Direct_Melt_Data()
         print('查询Cable_Fiber_ID结束')
-    if P7_Generate_Optical_Circut:
-        print('查询POS_ID开始')
+    if (P7_Generate_Jumper or 
+        P8_Generate_Optical_Circut):
         Query_JSESSIONIRMS_and_route()
+        print('查询POS_ID开始')
         Swimming_Pool(Query_POS_ID, List_Box_Data)
+        print('查询POS_ID结束')
+        print('查询POS_Port_ID开始')
+        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+        print('查询POS_Port_ID结束')
+    if P8_Generate_Optical_Circut:
         Generate_OC_POS_Data_and_OC_Name()
         Query_Work_Sheet_ID()
-        print('查询POS_ID结束')
 
 
     if P1_Push_Box:
@@ -940,12 +967,15 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Execute_Termination, List_Box_Data)
         Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
         print('P6-结束')
-    if P7_Generate_Optical_Circut:
-        print('P7-开始')
+    if P8_Generate_Optical_Circut:
+        print('P8-开始')
         Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
-        print('P7-结束')
+        print('P8-结束')
 
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
+
+    for each_box_data in List_Box_Data:
+        print(each_box_data['POS_IDs'])
