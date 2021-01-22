@@ -1,4 +1,6 @@
-d2 = {'Box_Name': '太原阳曲县山西豪德置业有限公司企业宽带GF4001号东楼道GF8001', 'Longitude': 112.715937063552, 'Latitude': 38.1584514963058, 'Box_Type': 'guangfenxianxiang', 'Box_Type_ID': 9204, 'ResPoint_Type_ID': 9115, 'City_ID': 445835190, 'County_ID': 445835318, 'Box_ID': '730421269', 'ResPoint_ID': '730421349', 'Alias': '太原阳曲县山西豪德置业有限公司企业宽带4-1#东楼道8-1二级分纤箱GF0001', 'ResPoint_Name': '太原阳曲县山西豪德置业有限公司企业宽带4-1#东楼道8-1二级分纤箱GF0001资源点', 'Project_Code_ID': '54487', 'POS': {'太原阳曲县山西豪德置业有限公司企业宽带4-1#东楼道8-1二级分光器': '730861594', '太原阳曲县山西豪德置业有限公司企业宽带5-1#东楼道10-1二级分光器': '730861653', '太原阳曲县山西豪德置业有限公司企业宽带5-1#西楼道9-1二级分光器': '730861570'}}
-print(d2['POS'])
-for keykey, valuevalue in d2['POS'].items():
-    print(keykey, valuevalue)
+dic = {'a':31, 'bc':5, 'c':3, 'asd':4, 'aa':74, 'd':0}
+
+fff = sorted(dic.items(), key = lambda item:item[0])
+
+
+print(str(dict(fff)))

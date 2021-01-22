@@ -20,17 +20,19 @@ from collections import Counter
 提交工单(理想情况)
 光路设计
 工单号写入(含工单建立)
+重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
 File_Name = ['豪德置业']
 
+P0_Data_Check                  = True
 P1_Push_Box                    = False
 P2_Generate_Support_Segment    = False
 P3_Generate_Cable_Segment      = False
 P4_Cable_Lay                   = False
 P5_Generate_ODM_and_Tray       = False
 P6_Termination_and_Direct_Melt = False
-P7_Generate_Jumper             = True
+P7_Generate_Jumper             = False
 P8_Generate_Optical_Circut     = False
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
@@ -977,5 +979,80 @@ if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
 
-    for each_box_data in List_Box_Data:
-        print(each_box_data['POS_IDs'])
+        if P0_Data_Check:
+            Generate_Local_Data(each_File_Name)
+            Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
+            Query_Support_Sys_and_Cable_Sys()
+            Query_Project_Code_ID()
+            Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
+            Generate_Topology()
+            Generate_FS_Data()
+            Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
+            Generate_Termination_and_Direct_Melt_Data()
+            Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+            Query_JSESSIONIRMS_and_route()
+            Swimming_Pool(Query_POS_ID, List_Box_Data)
+            Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+            Generate_OC_POS_Data_and_OC_Name()
+            Query_Work_Sheet_ID()
+
+        # 数据留底
+        WB_obj = load_workbook(each_File_Name+'.xlsx')
+
+        # List_Box_Data
+        WS_obj = WB_obj.create_sheet('List_Box_Data')
+        Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_box_data in List_Box_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_Box_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+        # List_CS_Data
+        WS_obj = WB_obj.create_sheet('List_CS_Data')
+        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_cs_data in List_CS_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_CS_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+        # List_OC_Data
+        WS_obj = WB_obj.create_sheet('List_OC_Data')
+        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_oc_data in List_OC_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_OC_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+        WB_obj.save(each_File_Name+'.xlsx')
+        WB_obj.close()
+
+
+    # for each_box_data in List_Box_Data:
+    #     print(each_box_data['POS_IDs'])
+    
+
+# print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
