@@ -613,7 +613,7 @@ def Query_POS_ID(Para_List_Box_Data):
 
 def Query_POS_Port_IDs(Para_List_Box_Data):
     Para_List_Box_Data['POS_IDs'] = []
-    for keykey, valuevalue in Para_List_Box_Data['POS'].items():
+    for valuevalue in Para_List_Box_Data['POS'].values():
         URL_Query_POS_Port_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
         Form_Info = '<params><param key="equ_type" value="pos"/><param key="equ_id" value="'+str(valuevalue)+'"/></params>'
         Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
