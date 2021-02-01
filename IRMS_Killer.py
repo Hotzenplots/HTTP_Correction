@@ -4,13 +4,13 @@ import requests
 import copy
 import json
 import datetime
+import base64
 from urllib import parse
 from lxml import etree
 from concurrent.futures import ThreadPoolExecutor
 from openpyxl import load_workbook
-from selenium import webdriver
-from time import sleep
 from collections import Counter
+from Crypto.Cipher import AES
 
 '''
 7013CSV是基础,除P1外都需要
@@ -25,7 +25,7 @@ from collections import Counter
 
 File_Name = ['豪德置业']
 
-P0_Data_Check                  = True
+P0_Data_Check                  = False
 P1_Push_Box                    = False
 P2_Generate_Support_Segment    = False
 P3_Generate_Cable_Segment      = False
@@ -72,6 +72,10 @@ def Generate_Local_Data(Para_File_Name):
     for list_num in List_Template:
         if List_7013[1][1] == list_num[0]:
             List_Template_Selected = copy.deepcopy(list_num)
+
+    global Login_Username,Login_Password
+    Login_Username = List_Template_Selected[17]
+    Login_Password = List_Template_Selected[18]
 
     '''读取并整理Sheet_Info,生成List_Box_Type和其他参数'''
     WS_obj = WB_obj['Info']
@@ -502,22 +506,36 @@ def Query_Support_Sys_and_Cable_Sys():
         print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
 def Query_JSESSIONIRMS_and_route():
-    Browser_Obj = webdriver.Ie()
-    Browser_Obj.get(r'http://portal.sx.cmcc/sxmcc_was/uploadResource/public/login/login.html')
-    Browser_Obj.find_element_by_id('username').send_keys('tyyangwei')
-    Browser_Obj.find_element_by_id('password').send_keys('tyyw789...')
-    Browser_Obj.find_element_by_class_name('lwb_login').click()
-    sleep(5)
-    Browser_Obj.get(r'http://portal.sx.cmcc/sxmcc_wcm/middelwebpage/app_recoder_log.jsp?app_flg=zhwlzygl_ywzl')
-    sleep(5)
-    Dic_Cookie_JSESSIONIRMS = Browser_Obj.get_cookie('JSESSIONIRMS')
-    Dic_Cookie_route = Browser_Obj.get_cookie('route')
-    JSESSIONIRMS_Value = Dic_Cookie_JSESSIONIRMS['value']
-    route_Value = Dic_Cookie_route['value']
-    Browser_Obj.quit()
+
+    def add_to_16(Para_Password):
+        while len(Para_Password) % 16 != 0:
+            Para_Password += '\x00'
+        return str.encode(Para_Password)
+
+    Encrypt_key='sxportaljiamikey'
+    Encrypt_key_byte = Encrypt_key.encode()
+    Encrypt_iv ='sxportaljiamiwyl'
+    Encrypt_iv_byte = Encrypt_iv.encode()
+    print(Login_Username)
+    print(Login_Password)
+    Login_Password_byte = Login_Password.encode()
+    Login_Password_byte = add_to_16(Login_Password)
+    Cipher = AES.new(Encrypt_key_byte, AES.MODE_CBC, Encrypt_iv_byte)
+    Encrypted_byte = Cipher.encrypt(Login_Password_byte)
+    Encrypted_byte = base64.b64encode(Encrypted_byte)
+    Encrypt_Password = Encrypted_byte.decode()
+
+    session = requests.session()
+    Response_Body = session.post('http://portal.sx.cmcc/pkmslogin.form?uid=tyyangwei',data= {'login-form-type':'pwd','username':Login_Username,'password':Encrypt_Password})
+    Response_Body = session.post('http://portal.sx.cmcc/sxmcc_wcm/middelwebpage/encryptportallogin/encryptlogin.jsp?appurl=http://10.209.199.72:7112/irms/sso.action')
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_userdt_ipaddress = Response_Body.xpath('//@value')
+    Response_Body = requests.post('http://10.209.199.72:7112/irms/sso.action',data={'userdt': List_userdt_ipaddress[0], 'ipAddress': List_userdt_ipaddress[1]})
+    cookies = requests.utils.dict_from_cookiejar(Response_Body.cookies)
     global Jsessionirms_v, route_v
-    Jsessionirms_v = JSESSIONIRMS_Value
-    route_v = route_Value
+    Jsessionirms_v = cookies['JSESSIONIRMS']
+    route_v = cookies['route']
     print('JSESSIONIRMS: ' + Jsessionirms_v)
     print('route: ' + route_v)
 
@@ -974,7 +992,6 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
         print('P8-结束')
 
-
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
@@ -996,59 +1013,59 @@ if __name__ == '__main__':
             Generate_OC_POS_Data_and_OC_Name()
             Query_Work_Sheet_ID()
 
-        # 数据留底
-        WB_obj = load_workbook(each_File_Name+'.xlsx')
+            # 数据留底
+            WB_obj = load_workbook(each_File_Name+'.xlsx')
 
-        # List_Box_Data
-        WS_obj = WB_obj.create_sheet('List_Box_Data')
-        Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_box_data in List_Box_Data:
-            Row_Num += 1
+            # List_Box_Data
+            WS_obj = WB_obj.create_sheet('List_Box_Data')
+            Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
             Column_Num = 0
-            dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_Box_Data.values():
+            for key in Dic_Column_Name.keys():
                 Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_box_data in List_Box_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_Box_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
-        # List_CS_Data
-        WS_obj = WB_obj.create_sheet('List_CS_Data')
-        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_cs_data in List_CS_Data:
-            Row_Num += 1
+            # List_CS_Data
+            WS_obj = WB_obj.create_sheet('List_CS_Data')
+            Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
             Column_Num = 0
-            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_CS_Data.values():
+            for key in Dic_Column_Name.keys():
                 Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_cs_data in List_CS_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_CS_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
-        # List_OC_Data
-        WS_obj = WB_obj.create_sheet('List_OC_Data')
-        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_oc_data in List_OC_Data:
-            Row_Num += 1
+            # List_OC_Data
+            WS_obj = WB_obj.create_sheet('List_OC_Data')
+            Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
             Column_Num = 0
-            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_OC_Data.values():
+            for key in Dic_Column_Name.keys():
                 Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_oc_data in List_OC_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_OC_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
-        WB_obj.save(each_File_Name+'.xlsx')
-        WB_obj.close()
+            WB_obj.save(each_File_Name+'.xlsx')
+            WB_obj.close()
 
 
     # for each_box_data in List_Box_Data:
