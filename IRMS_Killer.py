@@ -23,10 +23,10 @@ from Crypto.Cipher import AES
 重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
-File_Name = ['豪德置业']
+File_Name = ['西桥']
 
 P0_Data_Check                  = False
-P1_Push_Box                    = False
+P1_Push_Box                    = True
 P2_Generate_Support_Segment    = False
 P3_Generate_Cable_Segment      = False
 P4_Cable_Lay                   = False
@@ -83,6 +83,9 @@ def Generate_Local_Data(Para_File_Name):
     Latitude_Start = WS_obj['B2'].value
     Horizontal_Density = WS_obj['B3'].value
     Vertical_Density = WS_obj['B4'].value
+    Anchor_Point_Buttom = WS_obj['B5'].value
+    Anchor_Point_Right = WS_obj['B6'].value
+
     List_Box_Type = []
     cell_range = WS_obj['H2': 'J3']
     for row_data in cell_range:
@@ -102,6 +105,7 @@ def Generate_Local_Data(Para_File_Name):
             if v.value == None:
                 break
             List_Box_Name.append(list([v.value, row_num, column_num]))
+
     global List_Box_Data
     List_Box_Data = []
     for box_num in range(len(List_Box_Name)):
@@ -118,6 +122,16 @@ def Generate_Local_Data(Para_File_Name):
                 List_Box_Data[box_num]['ResPoint_Type_ID'] = List_Box_Type[row_data][2]
         List_Box_Data[box_num]['City_ID'] = List_Template_Selected[16]
         List_Box_Data[box_num]['County_ID'] = List_Template_Selected[1]
+
+    '''处理锚点'''
+    if Anchor_Point_Buttom:
+        Move_Up = List_Box_Name[-1][1]
+        for each_box_data in List_Box_Data:
+            each_box_data['Latitude'] = each_box_data['Latitude'] + Vertical_Density * (Move_Up - 1)
+    if Anchor_Point_Right:
+        Move_Left = List_Box_Name[-1][2]
+        for each_box_data in List_Box_Data:
+            each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
     '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
     WS_obj = WB_obj['OCS_List']
