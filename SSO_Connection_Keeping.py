@@ -45,10 +45,10 @@ def Keep_7112():
     Exist_Work_Sheet = Response_Body['totalCount']
     print('光路工单',Exist_Work_Sheet,'个')
 
-def Keep_7016(para_tsid, para_route):
+def Keep_7016():
     URL_7016 = 'http://10.209.199.32:7016/irms/tasklistAction!waitedTaskAJAX.ilf'
     Session_7016 = requests.session()
-    requests.utils.add_dict_to_cookiejar(Session_7016.cookies,{'tsid':para_tsid, 'route': para_route})
+    requests.utils.add_dict_to_cookiejar(Session_7016.cookies,{'tsid':tsid_7016, 'route': route_7016})
     Form_Info_Encoded = 'start=' + parse.quote_plus('0') + '&limit='+ parse.quote_plus('15')
     Request_Lenth = str(len(Form_Info_Encoded))
     Session_7016.headers.update({'Host':'10.209.199.32:7016', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth})
@@ -63,7 +63,7 @@ def Keep_7016(para_tsid, para_route):
 
 while True:
     print(datetime.datetime.now())
-    Keep_7112()
-    # Keep_7016(tsid_7016,route_7016)
+    # Keep_7112()
+    Keep_7016()
     sleep(600)
 
