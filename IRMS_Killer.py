@@ -23,7 +23,7 @@ from Crypto.Cipher import AES
 重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
-File_Name = ['西桥']
+File_Name = ['豪德置业']
 
 P0_Data_Check                  = False
 P1_Push_Box                    = True
@@ -703,12 +703,15 @@ def Query_Work_Sheet_ID():
 
 
 def Execute_Push_Box(Para_List_Box_Data):
-    URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/SynchroController/synchroData?sid=' + str(Para_List_Box_Data['Box_ID']) + '&sType=' + str(Para_List_Box_Data['Box_Type']) + '&longi='+str(Para_List_Box_Data['Longitude']) + '&lati=' + str(Para_List_Box_Data['Latitude'])
-    Request_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded"}
-    Response_Body = requests.post(URL_Push_Box, headers=Request_Header)
+    URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=move'
+    Form_Info = '<xmldata mode="SinglePointEditMode"><mc type="ziyuandian"><mo group="1"><fv k="LATITUDE" v="' + str(Para_List_Box_Data['Latitude']) + '"/><fv k="INT_ID" v="' + str(Para_List_Box_Data['ResPoint_ID']) + '"/><fv k="ZH_LABEL" v="' + Para_List_Box_Data['ResPoint_Name'] + '"/><fv k="LONGITUDE" v="' + str(Para_List_Box_Data['Longitude']) + '"/></mo></mc></xmldata>'
+    Form_Info_Encoded = 'xml=' + parse.quote_plus(Form_Info)
+    Request_Lenth = str(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Push_Box, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
     Response_Body = etree.HTML(Response_Body)
-    Push_Result = Response_Body.xpath('//message/text()')
+    Push_Result = Response_Body.xpath('//@loaded')
     print('P1-{}-{}'.format(Para_List_Box_Data['Box_Name'], Push_Result[0]))
 
 def Execute_Generate_Support_Segment():
