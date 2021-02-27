@@ -702,9 +702,16 @@ def Query_Work_Sheet_ID():
                     break
 
 
-def Execute_Push_Box(Para_List_Box_Data):
+def Execute_Push_Box():
     URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=move'
-    Form_Info = '<xmldata mode="SinglePointEditMode"><mc type="ziyuandian"><mo group="1"><fv k="LATITUDE" v="' + str(Para_List_Box_Data['Latitude']) + '"/><fv k="INT_ID" v="' + str(Para_List_Box_Data['ResPoint_ID']) + '"/><fv k="ZH_LABEL" v="' + Para_List_Box_Data['ResPoint_Name'] + '"/><fv k="LONGITUDE" v="' + str(Para_List_Box_Data['Longitude']) + '"/></mo></mc></xmldata>'
+    Form_Info_Head = '<xmldata mode="SinglePointEditMode"><mc type="ziyuandian">'
+    Form_Info_Tail = '</mc></xmldata>'
+    List_Form_Info_Body = []
+    for each_box_data in List_Box_Data:
+        Form_Info_Body = '<mo group="1"><fv k="LATITUDE" v="' + str(each_box_data['Latitude']) + '"/><fv k="INT_ID" v="' + str(each_box_data['ResPoint_ID']) + '"/><fv k="ZH_LABEL" v="' + each_box_data['ResPoint_Name'] + '"/><fv k="LONGITUDE" v="' + str(each_box_data['Longitude']) + '"/></mo>'
+        List_Form_Info_Body.append(Form_Info_Body)
+    Form_Info_Body = ''.join(List_Form_Info_Body)
+    Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
     Form_Info_Encoded = 'xml=' + parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
@@ -712,7 +719,7 @@ def Execute_Push_Box(Para_List_Box_Data):
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
     Response_Body = etree.HTML(Response_Body)
     Push_Result = Response_Body.xpath('//@loaded')
-    print('P1-{}-{}'.format(Para_List_Box_Data['Box_Name'], Push_Result[0]))
+    print('P1-推箱子-{}'.format(Push_Result[0]))
 
 def Execute_Generate_Support_Segment():
     URL_Generate_Support_Segment = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesAdd'
@@ -980,7 +987,7 @@ def Main_Process(Para_File_Name):
 
     if P1_Push_Box:
         print('P1-开始')
-        Swimming_Pool(Execute_Push_Box, List_Box_Data)
+        Execute_Push_Box()
         print('P1-结束')
     if P2_Generate_Support_Segment:
         print('P2-开始')
