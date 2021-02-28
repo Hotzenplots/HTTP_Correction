@@ -134,7 +134,7 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    if P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
         '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
         WS_obj = WB_obj['OCS_List']
         global List_CS_Data
@@ -428,7 +428,7 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
-    if P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
         for ocs_num in List_CS_Data:
             for box_num in List_Box_Data:
                 if ocs_num['A_Box_Name'] == box_num['Box_Name']:
