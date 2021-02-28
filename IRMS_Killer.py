@@ -25,16 +25,6 @@ from Crypto.Cipher import AES
 
 File_Name = ['豪德置业']
 
-P0_Data_Check                  = False
-P1_Push_Box                    = True
-P2_Generate_Support_Segment    = False
-P3_Generate_Cable_Segment      = False
-P4_Cable_Lay                   = False
-P5_Generate_ODM_and_Tray       = False
-P6_Termination_and_Direct_Melt = False
-P7_Generate_Jumper             = False
-P8_Generate_Optical_Circut     = False
-
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
         Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
@@ -86,6 +76,17 @@ def Generate_Local_Data(Para_File_Name):
     Anchor_Point_Buttom = WS_obj['B5'].value
     Anchor_Point_Right = WS_obj['B6'].value
 
+    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM_and_Tray,P6_Termination_and_Direct_Melt,P7_Generate_Jumper,P8_Generate_Optical_Circut
+    P0_Data_Check                  = WS_obj['E2'].value
+    P1_Push_Box                    = WS_obj['E3'].value
+    P2_Generate_Support_Segment    = WS_obj['E4'].value
+    P3_Generate_Cable_Segment      = WS_obj['E5'].value
+    P4_Cable_Lay                   = WS_obj['E6'].value
+    P5_Generate_ODM_and_Tray       = WS_obj['E7'].value
+    P6_Termination_and_Direct_Melt = WS_obj['E8'].value
+    P7_Generate_Jumper             = WS_obj['E9'].value
+    P8_Generate_Optical_Circut     = WS_obj['E10'].value
+
     List_Box_Type = []
     cell_range = WS_obj['H2': 'J3']
     for row_data in cell_range:
@@ -133,101 +134,102 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
-    WS_obj = WB_obj['OCS_List']
-    global List_CS_Data
-    List_CS_Data = []
-    for row_num in range(1,501):
-        OCS_A_Box_Name = WS_obj.cell(row_num, 1).value
-        OCS_Z_Box_Name = WS_obj.cell(row_num, 2).value
-        OCS_Width = WS_obj.cell(row_num, 3).value
-        if OCS_A_Box_Name == None:
-            break
-        List_CS_Data.append(dict({'A_Box_Name': OCS_A_Box_Name}))
-        List_CS_Data[row_num - 1]['Z_Box_Name'] = OCS_Z_Box_Name
-        List_CS_Data[row_num - 1]['Width'] = OCS_Width
-    
-    #Length_Prepare
-    Horizontal_Metre = 111.11 * 1000 * math.cos(Latitude_Start * math.pi / 180)
-    Vertical_Metre = 111.11 * 1000
-    
-    for dic_num_in_osc in List_CS_Data:
-        for dic_num_in_box in List_Box_Data:
-            if dic_num_in_osc['A_Box_Name'] == dic_num_in_box['Box_Name']:
-                dic_num_in_osc['A_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
-                dic_num_in_osc['A_Box_Type'] = dic_num_in_box['Box_Type']
-                dic_num_in_osc['A_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
-                dic_num_in_osc['A_Longitude'] = dic_num_in_box['Longitude']
-                dic_num_in_osc['A_Latitude'] = dic_num_in_box['Latitude']
-            if dic_num_in_osc['Z_Box_Name'] == dic_num_in_box['Box_Name']:
-                dic_num_in_osc['Z_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
-                dic_num_in_osc['Z_Box_Type'] = dic_num_in_box['Box_Type']
-                dic_num_in_osc['Z_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
-                dic_num_in_osc['Z_Longitude'] = dic_num_in_box['Longitude']
-                dic_num_in_osc['Z_Latitude'] = dic_num_in_box['Latitude']
-        dic_num_in_osc['Length'] = round(math.sqrt(((dic_num_in_osc['A_Longitude'] - dic_num_in_osc['Z_Longitude']) * Horizontal_Metre) ** 2 + ((dic_num_in_osc['A_Latitude'] - dic_num_in_osc['Z_Latitude'])* Vertical_Metre) ** 2))
-        dic_num_in_osc['Business_Level'] = 8
-        dic_num_in_osc['Life_Cycle'] = 8
-        dic_num_in_osc['Owner_Type'] = 1
-        dic_num_in_osc['Owner_Name'] = 0
-        dic_num_in_osc['Field_Type'] = '市城区域'
-        dic_num_in_osc['City_ID'] = List_Template_Selected[16]
-        dic_num_in_osc['County_ID'] = List_Template_Selected[1]
-        dic_num_in_osc['DQS_Project_ID'] = List_Template_Selected[3]
-        dic_num_in_osc['DQS_ID'] = List_Template_Selected[5]
-        dic_num_in_osc['DQS_County_ID'] = List_Template_Selected[7]
-        dic_num_in_osc['DQS_Maintainer_ID'] = List_Template_Selected[9]
-        dic_num_in_osc['Task_Name_ID'] = Task_Name_ID_List[0]
+    if P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+        '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
+        WS_obj = WB_obj['OCS_List']
+        global List_CS_Data
+        List_CS_Data = []
+        for row_num in range(1,501):
+            OCS_A_Box_Name = WS_obj.cell(row_num, 1).value
+            OCS_Z_Box_Name = WS_obj.cell(row_num, 2).value
+            OCS_Width = WS_obj.cell(row_num, 3).value
+            if OCS_A_Box_Name == None:
+                break
+            List_CS_Data.append(dict({'A_Box_Name': OCS_A_Box_Name}))
+            List_CS_Data[row_num - 1]['Z_Box_Name'] = OCS_Z_Box_Name
+            List_CS_Data[row_num - 1]['Width'] = OCS_Width
+        
+        #Length_Prepare
+        Horizontal_Metre = 111.11 * 1000 * math.cos(Latitude_Start * math.pi / 180)
+        Vertical_Metre = 111.11 * 1000
+        
+        for dic_num_in_osc in List_CS_Data:
+            for dic_num_in_box in List_Box_Data:
+                if dic_num_in_osc['A_Box_Name'] == dic_num_in_box['Box_Name']:
+                    dic_num_in_osc['A_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
+                    dic_num_in_osc['A_Box_Type'] = dic_num_in_box['Box_Type']
+                    dic_num_in_osc['A_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
+                    dic_num_in_osc['A_Longitude'] = dic_num_in_box['Longitude']
+                    dic_num_in_osc['A_Latitude'] = dic_num_in_box['Latitude']
+                if dic_num_in_osc['Z_Box_Name'] == dic_num_in_box['Box_Name']:
+                    dic_num_in_osc['Z_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
+                    dic_num_in_osc['Z_Box_Type'] = dic_num_in_box['Box_Type']
+                    dic_num_in_osc['Z_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
+                    dic_num_in_osc['Z_Longitude'] = dic_num_in_box['Longitude']
+                    dic_num_in_osc['Z_Latitude'] = dic_num_in_box['Latitude']
+            dic_num_in_osc['Length'] = round(math.sqrt(((dic_num_in_osc['A_Longitude'] - dic_num_in_osc['Z_Longitude']) * Horizontal_Metre) ** 2 + ((dic_num_in_osc['A_Latitude'] - dic_num_in_osc['Z_Latitude'])* Vertical_Metre) ** 2))
+            dic_num_in_osc['Business_Level'] = 8
+            dic_num_in_osc['Life_Cycle'] = 8
+            dic_num_in_osc['Owner_Type'] = 1
+            dic_num_in_osc['Owner_Name'] = 0
+            dic_num_in_osc['Field_Type'] = '市城区域'
+            dic_num_in_osc['City_ID'] = List_Template_Selected[16]
+            dic_num_in_osc['County_ID'] = List_Template_Selected[1]
+            dic_num_in_osc['DQS_Project_ID'] = List_Template_Selected[3]
+            dic_num_in_osc['DQS_ID'] = List_Template_Selected[5]
+            dic_num_in_osc['DQS_County_ID'] = List_Template_Selected[7]
+            dic_num_in_osc['DQS_Maintainer_ID'] = List_Template_Selected[9]
+            dic_num_in_osc['Task_Name_ID'] = Task_Name_ID_List[0]
 
-    '''生成List_OC_Data'''
-    global List_OC_Data
-    List_OC_Data = []
-    for each_7013_line in List_7013: 
-        if each_7013_line[10] == '二级':
-            List_OC_Data.append(dict({
-                'Z_POS_Name': each_7013_line[11],
-                'Z_Box_Name':  each_7013_line[3],
-                'A_POS_Name': each_7013_line[8],
-                'City_ID': List_Template_Selected[16],
-                'County_ID': List_Template_Selected[1],
-                'Business_Name': Task_Name_ID_List[1],
-                'Project_Code': each_7013_line[4],
-                'Task_Name': each_7013_line[5],
-                'Task_Name_ID': Task_Name_ID_List[0],
-                'DQS_Project': List_Template_Selected[11],
-                'DQS_Project_ID': List_Template_Selected[3],
-                'DQS': List_Template_Selected[12],
-                'DQS_ID': List_Template_Selected[5],
-                'DQS_County': List_Template_Selected[13],
-                'DQS_County_ID': List_Template_Selected[7],
-                'DQS_Maintainer': List_Template_Selected[8],
-                'DQS_Maintainer_ID': List_Template_Selected[9],
-                'AEquType': 10002,
-                'ZEquType': 10002,
-                'SXBussType': '家客业务',
-                'AJoinName': '网元成端设备',
-                'ZJoinName': '网元成端设备',
-                'FiberCount': 1,
-                'BussType': 207, # 设备类型 207 PON/402 直联光路
-                'AppType': 1005, # 应用类型  1005 业务光路/1006 尾纤光路
-                'ServiceLevel': 101, # 101 家客接入/111 驻地网
-                }))
-    for each_oc_data in List_OC_Data:
-        for each_7013_line in List_7013:
-            if each_oc_data['A_POS_Name'] == each_7013_line[11]: # 中文名称 each_7013_line[2] # 资管中文名称
-                each_oc_data['A_Box_Name'] = each_7013_line[3]
-        if each_oc_data['A_Box_Name'] == each_oc_data['Z_Box_Name']:
-            each_oc_data['BussType'] = 402
-            each_oc_data['AppType'] = 1006
-        for each_box_data in List_Box_Data:
-            if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
-                each_oc_data['A_Box_Type'] = each_box_data['Box_Type']
-                each_oc_data['A_Box_Type_ID'] = each_box_data['Box_Type_ID']
-                each_oc_data['A_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
-            if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
-                each_oc_data['Z_Box_Type'] = each_box_data['Box_Type']
-                each_oc_data['Z_Box_Type_ID'] = each_box_data['Box_Type_ID']
-                each_oc_data['Z_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
+        '''生成List_OC_Data'''
+        global List_OC_Data
+        List_OC_Data = []
+        for each_7013_line in List_7013: 
+            if each_7013_line[10] == '二级':
+                List_OC_Data.append(dict({
+                    'Z_POS_Name': each_7013_line[11],
+                    'Z_Box_Name':  each_7013_line[3],
+                    'A_POS_Name': each_7013_line[8],
+                    'City_ID': List_Template_Selected[16],
+                    'County_ID': List_Template_Selected[1],
+                    'Business_Name': Task_Name_ID_List[1],
+                    'Project_Code': each_7013_line[4],
+                    'Task_Name': each_7013_line[5],
+                    'Task_Name_ID': Task_Name_ID_List[0],
+                    'DQS_Project': List_Template_Selected[11],
+                    'DQS_Project_ID': List_Template_Selected[3],
+                    'DQS': List_Template_Selected[12],
+                    'DQS_ID': List_Template_Selected[5],
+                    'DQS_County': List_Template_Selected[13],
+                    'DQS_County_ID': List_Template_Selected[7],
+                    'DQS_Maintainer': List_Template_Selected[8],
+                    'DQS_Maintainer_ID': List_Template_Selected[9],
+                    'AEquType': 10002,
+                    'ZEquType': 10002,
+                    'SXBussType': '家客业务',
+                    'AJoinName': '网元成端设备',
+                    'ZJoinName': '网元成端设备',
+                    'FiberCount': 1,
+                    'BussType': 207, # 设备类型 207 PON/402 直联光路
+                    'AppType': 1005, # 应用类型  1005 业务光路/1006 尾纤光路
+                    'ServiceLevel': 101, # 101 家客接入/111 驻地网
+                    }))
+        for each_oc_data in List_OC_Data:
+            for each_7013_line in List_7013:
+                if each_oc_data['A_POS_Name'] == each_7013_line[11]: # 中文名称 each_7013_line[2] # 资管中文名称
+                    each_oc_data['A_Box_Name'] = each_7013_line[3]
+            if each_oc_data['A_Box_Name'] == each_oc_data['Z_Box_Name']:
+                each_oc_data['BussType'] = 402
+                each_oc_data['AppType'] = 1006
+            for each_box_data in List_Box_Data:
+                if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
+                    each_oc_data['A_Box_Type'] = each_box_data['Box_Type']
+                    each_oc_data['A_Box_Type_ID'] = each_box_data['Box_Type_ID']
+                    each_oc_data['A_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
+                if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
+                    each_oc_data['Z_Box_Type'] = each_box_data['Box_Type']
+                    each_oc_data['Z_Box_Type_ID'] = each_box_data['Box_Type_ID']
+                    each_oc_data['Z_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
 
 def Generate_Topology():
     global CS_Topology
@@ -425,25 +427,27 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             List_Box_Data[box_num]['ResPoint_ID'] = Dic_Response['STRUCTURE_ID']
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
-    for ocs_num in List_CS_Data:
-        for box_num in List_Box_Data:
-            if ocs_num['A_Box_Name'] == box_num['Box_Name']:
-                ocs_num['A_Box_ID'] = box_num['Box_ID']
-                ocs_num['A_ResPoint_ID'] = box_num['ResPoint_ID']
-        for box_num in List_Box_Data:
-            if ocs_num['Z_Box_Name'] == box_num['Box_Name']:
-                ocs_num['Z_Box_ID'] = box_num['Box_ID']
-                ocs_num['Z_ResPoint_ID'] = box_num['ResPoint_ID']
-    for each_oc_data in List_OC_Data:
-        for each_box_data in List_Box_Data:
-            if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
-                each_oc_data['A_Box_ID'] = each_box_data['Box_ID']
-                each_oc_data['A_ResPoint_ID'] = each_box_data['ResPoint_ID']
-                each_oc_data['A_ResPoint_Name'] = each_box_data['ResPoint_Name']
-            if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
-                each_oc_data['Z_Box_ID'] = each_box_data['Box_ID']
-                each_oc_data['Z_ResPoint_ID'] = each_box_data['ResPoint_ID']
-                each_oc_data['Z_ResPoint_Name'] = each_box_data['ResPoint_Name']
+
+    if P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+        for ocs_num in List_CS_Data:
+            for box_num in List_Box_Data:
+                if ocs_num['A_Box_Name'] == box_num['Box_Name']:
+                    ocs_num['A_Box_ID'] = box_num['Box_ID']
+                    ocs_num['A_ResPoint_ID'] = box_num['ResPoint_ID']
+            for box_num in List_Box_Data:
+                if ocs_num['Z_Box_Name'] == box_num['Box_Name']:
+                    ocs_num['Z_Box_ID'] = box_num['Box_ID']
+                    ocs_num['Z_ResPoint_ID'] = box_num['ResPoint_ID']
+        for each_oc_data in List_OC_Data:
+            for each_box_data in List_Box_Data:
+                if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
+                    each_oc_data['A_Box_ID'] = each_box_data['Box_ID']
+                    each_oc_data['A_ResPoint_ID'] = each_box_data['ResPoint_ID']
+                    each_oc_data['A_ResPoint_Name'] = each_box_data['ResPoint_Name']
+                if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
+                    each_oc_data['Z_Box_ID'] = each_box_data['Box_ID']
+                    each_oc_data['Z_ResPoint_ID'] = each_box_data['ResPoint_ID']
+                    each_oc_data['Z_ResPoint_Name'] = each_box_data['ResPoint_Name']
 
 def Query_Support_Sys_and_Cable_Sys():
     Task_Name_ID_List = List_7013[1][5].split('-')
