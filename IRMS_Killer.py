@@ -23,7 +23,7 @@ from Crypto.Cipher import AES
 重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
-File_Name = ['豪德置业']
+File_Name = ['峪峰花园']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -583,7 +583,7 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_Name'] = List_Response_Value[1]
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID'] = List_Response_Value[0]
     for cable_seg in List_CS_Data:
-        if Para_List_CS_Data['A_Box_Name'] == cable_seg['A_Box_Name']:
+        if (Para_List_CS_Data['A_Box_Name'] == cable_seg['A_Box_Name']) and (Para_List_CS_Data['Z_Box_Name'] == cable_seg['Z_Box_Name']):
             cable_seg['Support_Seg_Name'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_Name']
             cable_seg['Support_Seg_ID'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_ID']
             cable_seg['Cable_Seg_Name'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_Name']
@@ -929,7 +929,9 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
     print('P7-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
 
 def Main_Process(Para_File_Name):
+
     Generate_Local_Data(Para_File_Name)
+
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
@@ -941,6 +943,12 @@ def Main_Process(Para_File_Name):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
+
+    if P1_Push_Box:
+        print('P1-开始')
+        Execute_Push_Box()
+        print('P1-结束')
+
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
         P4_Cable_Lay or 
@@ -954,12 +962,29 @@ def Main_Process(Para_File_Name):
         P8_Generate_Optical_Circut):
         print('查询Project_Code_ID')
         Query_Project_Code_ID()
+
+    if P2_Generate_Support_Segment:
+        print('P2-开始')
+        Execute_Generate_Support_Segment()
+        print('P2-结束')
+    if P3_Generate_Cable_Segment:
+        print('P3-开始')
+        Execute_Generate_Cable_Segment()
+        print('P3-结束')
+
     if (P4_Cable_Lay or 
         P6_Termination_and_Direct_Melt or 
         P7_Generate_Jumper):
-        print('查询Support_Seg_ID/Cable_Seg_ID开始')
-        Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
-        print('查询Support_Seg_ID/Cable_Seg_ID结束')
+        if (not ('Support_Seg_ID' in List_CS_Data[0])) or (not ('Cable_Seg_ID' in List_CS_Data[0])):
+            print('查询Support_Seg_ID/Cable_Seg_ID开始')
+            Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
+            print('查询Support_Seg_ID/Cable_Seg_ID结束')
+
+    if P4_Cable_Lay:
+        print('P4-开始')
+        Swimming_Pool(Execute_Cable_Lay, List_CS_Data)
+        print('P4-结束')
+
     if (P5_Generate_ODM_and_Tray or 
         P6_Termination_and_Direct_Melt):
         Generate_Topology()
@@ -989,22 +1014,9 @@ def Main_Process(Para_File_Name):
         Query_Work_Sheet_ID()
 
 
-    if P1_Push_Box:
-        print('P1-开始')
-        Execute_Push_Box()
-        print('P1-结束')
-    if P2_Generate_Support_Segment:
-        print('P2-开始')
-        Execute_Generate_Support_Segment()
-        print('P2-结束')
-    if P3_Generate_Cable_Segment:
-        print('P3-开始')
-        Execute_Generate_Cable_Segment()
-        print('P3-结束')
-    if P4_Cable_Lay:
-        print('P4-开始')
-        Swimming_Pool(Execute_Cable_Lay, List_CS_Data)
-        print('P4-结束')
+
+
+
     if P5_Generate_ODM_and_Tray:
         print('P5-开始')
         Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
