@@ -76,14 +76,14 @@ def Generate_Local_Data(Para_File_Name):
     Anchor_Point_Buttom = WS_obj['B5'].value
     Anchor_Point_Right = WS_obj['B6'].value
 
-    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM_and_Tray,P6_Termination_and_Direct_Melt,P7_Generate_Jumper,P8_Generate_Optical_Circut
+    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Generate_Jumper,P8_Generate_Optical_Circut
     P0_Data_Check                  = WS_obj['E2'].value
     P1_Push_Box                    = WS_obj['E3'].value
     P2_Generate_Support_Segment    = WS_obj['E4'].value
     P3_Generate_Cable_Segment      = WS_obj['E5'].value
     P4_Cable_Lay                   = WS_obj['E6'].value
-    P5_Generate_ODM_and_Tray       = WS_obj['E7'].value
-    P6_Termination_and_Direct_Melt = WS_obj['E8'].value
+    P5_Generate_ODM                = WS_obj['E7'].value
+    P6_Generate_Tray               = WS_obj['E8'].value
     P7_Generate_Jumper             = WS_obj['E9'].value
     P8_Generate_Optical_Circut     = WS_obj['E10'].value
 
@@ -142,7 +142,7 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Generate_Jumper or P8_Generate_Optical_Circut:
         '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
         WS_obj = WB_obj['OCS_List']
         global List_CS_Data
@@ -442,7 +442,7 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM_and_Tray or P6_Termination_and_Direct_Melt or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Generate_Jumper or P8_Generate_Optical_Circut:
         for ocs_num in List_CS_Data:
             for box_num in List_Box_Data:
                 if ocs_num['A_Box_Name'] == box_num['Box_Name']:
@@ -950,10 +950,8 @@ def Main_Process(Para_File_Name):
         P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
         P4_Cable_Lay or 
-        P5_Generate_ODM_and_Tray or 
-        P6_Termination_and_Direct_Melt or 
-        P7_Generate_Jumper or 
-        P8_Generate_Optical_Circut):
+        P5_Generate_ODM or 
+        P6_Generate_Tray):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
@@ -965,15 +963,12 @@ def Main_Process(Para_File_Name):
 
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
-        P4_Cable_Lay or 
-        P5_Generate_ODM_and_Tray or 
-        P6_Termination_and_Direct_Melt):
+        P4_Cable_Lay):
         print('查询Support_Sys_ID/Cable_Sys_ID')
         Query_Support_Sys_and_Cable_Sys()
+
     if (P2_Generate_Support_Segment or 
-        P3_Generate_Cable_Segment or 
-        P7_Generate_Jumper or 
-        P8_Generate_Optical_Circut):
+        P3_Generate_Cable_Segment):
         print('查询Project_Code_ID')
         Query_Project_Code_ID()
 
@@ -981,14 +976,13 @@ def Main_Process(Para_File_Name):
         print('P2-开始')
         Execute_Generate_Support_Segment()
         print('P2-结束')
+
     if P3_Generate_Cable_Segment:
         print('P3-开始')
         Execute_Generate_Cable_Segment()
         print('P3-结束')
 
-    if (P4_Cable_Lay or 
-        P6_Termination_and_Direct_Melt or 
-        P7_Generate_Jumper):
+    if P4_Cable_Lay:
         if (not ('Support_Seg_ID' in List_CS_Data[0])) or (not ('Cable_Seg_ID' in List_CS_Data[0])):
             print('查询Support_Seg_ID/Cable_Seg_ID开始')
             Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
@@ -999,53 +993,63 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Execute_Cable_Lay, List_CS_Data)
         print('P4-结束')
 
-    if (P5_Generate_ODM_and_Tray or 
-        P6_Termination_and_Direct_Melt):
+    if (P5_Generate_ODM or 
+        P6_Generate_Tray):
         Generate_Topology()
         Generate_FS_Data()
+
+    if P5_Generate_ODM:
+        print('P5-开始')
+        Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
+        print('P5-结束')
+
+    if P6_Generate_Tray:
         if not ('ODM_ID' in List_Box_Data[0]):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             print('查询ODM_ID结束')
 
-    if P6_Termination_and_Direct_Melt:
-        Generate_Termination_and_Direct_Melt_Data()
-    if (P6_Termination_and_Direct_Melt or
-        P7_Generate_Jumper):
-        print('查询Cable_Fiber_ID开始')
-        Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-        print('查询Cable_Fiber_ID结束')
-    if (P7_Generate_Jumper or 
-        P8_Generate_Optical_Circut):
-        Query_JSESSIONIRMS_and_route()
-        print('查询POS_ID开始')
-        Swimming_Pool(Query_POS_ID, List_Box_Data)
-        print('查询POS_ID结束')
-        print('查询POS_Port_ID开始')
-        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-        print('查询POS_Port_ID结束')
-    if P8_Generate_Optical_Circut:
-        Generate_OC_POS_Data_and_OC_Name()
-        Query_Work_Sheet_ID()
-
-
-
-
-
-    if P5_Generate_ODM_and_Tray:
-        print('P5-开始')
-        Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
-        Swimming_Pool(Execute_Generate_Tray, List_Box_Data)
-        print('P5-结束')
-    if P6_Termination_and_Direct_Melt:
+    if P6_Generate_Tray:
         print('P6-开始')
-        Swimming_Pool(Execute_Termination, List_Box_Data)
-        Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
+        Swimming_Pool(Execute_Generate_Tray, List_Box_Data)
         print('P6-结束')
-    if P8_Generate_Optical_Circut:
-        print('P8-开始')
-        Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
-        print('P8-结束')
+
+    # if (P6_Generate_Tray or
+    #     P7_Generate_Jumper):
+    #     print('查询Cable_Fiber_ID开始')
+    #     Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+    #     print('查询Cable_Fiber_ID结束')
+    # if (P7_Generate_Jumper or 
+    #     P8_Generate_Optical_Circut):
+    #     Query_JSESSIONIRMS_and_route()
+    #     print('查询POS_ID开始')
+    #     Swimming_Pool(Query_POS_ID, List_Box_Data)
+    #     print('查询POS_ID结束')
+    #     print('查询POS_Port_ID开始')
+    #     Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+    #     print('查询POS_Port_ID结束')
+    # if P8_Generate_Optical_Circut:
+    #     Generate_OC_POS_Data_and_OC_Name()
+    #     Query_Work_Sheet_ID()
+
+
+
+
+
+    # if P5_Generate_ODM:
+    #     print('P5-开始')
+    #     Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
+    #     Swimming_Pool(Execute_Generate_Tray, List_Box_Data)
+    #     print('P5-结束')
+    # if P6_Generate_Tray:
+    #     print('P6-开始')
+    #     Swimming_Pool(Execute_Termination, List_Box_Data)
+    #     Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
+    #     print('P6-结束')
+    # if P8_Generate_Optical_Circut:
+    #     print('P8-开始')
+    #     Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
+    #     print('P8-结束')
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
