@@ -23,7 +23,7 @@ from Crypto.Cipher import AES
 重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
-File_Name = ['峪峰花园']
+File_Name = ['峪峰花园小']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -86,6 +86,14 @@ def Generate_Local_Data(Para_File_Name):
     P6_Termination_and_Direct_Melt = WS_obj['E8'].value
     P7_Generate_Jumper             = WS_obj['E9'].value
     P8_Generate_Optical_Circut     = WS_obj['E10'].value
+
+    # 根据照片修改ODM和Tray
+    global List_Modify_Tray
+    List_Modify_Tray = []
+    box_num = 0
+    while WS_obj[('D' + str(20 + box_num))].value:
+        List_Modify_Tray.append([WS_obj[('D' + str(20 + box_num))].value, WS_obj[('E' + str(20 + box_num))].value])
+        box_num += 1
 
     List_Box_Type = []
     cell_range = WS_obj['H2': 'J3']
@@ -306,6 +314,12 @@ def Generate_FS_Data():
             for cable_seg_data in List_CS_Data:
                 if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
                     box_info['ODM_Rows'] = box_info['Tray_Count'] = math.ceil(cable_seg_data['Width'] / 12) + box_info['ODM_Rows']
+
+    # 根据照片修改ODM和Tray
+    for box_info in List_Box_Data:
+        for modify_tray in List_Modify_Tray:
+            if box_info['Box_Name'] == modify_tray[0]:
+                 box_info['ODM_Rows'] = box_info['Tray_Count'] = modify_tray[1]
 
 def Generate_Termination_and_Direct_Melt_Data():
     for box_info in List_Box_Data:
@@ -993,6 +1007,7 @@ def Main_Process(Para_File_Name):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             print('查询ODM_ID结束')
+
     if P6_Termination_and_Direct_Melt:
         Generate_Termination_and_Direct_Melt_Data()
     if (P6_Termination_and_Direct_Melt or
