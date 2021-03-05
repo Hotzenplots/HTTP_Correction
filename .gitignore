@@ -126,3 +126,5 @@ dmypy.json
 *.csv
 *.xls
 *.xlsx
+*.jpg
+*.rar

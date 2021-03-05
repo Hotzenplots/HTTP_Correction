@@ -23,7 +23,7 @@ from Crypto.Cipher import AES
 重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
-File_Name = ['峪峰花园小']
+File_Name = ['峪峰花园']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -1003,7 +1003,7 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
         print('P5-结束')
 
-    if P6_Generate_Tray:
+    if P6_Generate_Tray: # 单独添加托盘需要查询
         if not ('ODM_ID' in List_Box_Data[0]):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
@@ -1032,16 +1032,6 @@ def Main_Process(Para_File_Name):
     #     Generate_OC_POS_Data_and_OC_Name()
     #     Query_Work_Sheet_ID()
 
-
-
-
-
-    # if P5_Generate_ODM:
-    #     print('P5-开始')
-    #     Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
-    #     Swimming_Pool(Execute_Generate_Tray, List_Box_Data)
-    #     print('P5-结束')
-    # if P6_Generate_Tray:
     #     print('P6-开始')
     #     Swimming_Pool(Execute_Termination, List_Box_Data)
     #     Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
