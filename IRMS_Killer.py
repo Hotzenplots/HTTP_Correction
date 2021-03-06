@@ -23,7 +23,7 @@ from Crypto.Cipher import AES
 重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
-File_Name = ['峪峰花园']
+File_Name = ['峪峰花园小']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -76,7 +76,7 @@ def Generate_Local_Data(Para_File_Name):
     Anchor_Point_Buttom = WS_obj['B5'].value
     Anchor_Point_Right = WS_obj['B6'].value
 
-    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Generate_Jumper,P8_Generate_Optical_Circut
+    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt
     P0_Data_Check                  = WS_obj['E2'].value
     P1_Push_Box                    = WS_obj['E3'].value
     P2_Generate_Support_Segment    = WS_obj['E4'].value
@@ -84,8 +84,8 @@ def Generate_Local_Data(Para_File_Name):
     P4_Cable_Lay                   = WS_obj['E6'].value
     P5_Generate_ODM                = WS_obj['E7'].value
     P6_Generate_Tray               = WS_obj['E8'].value
-    P7_Generate_Jumper             = WS_obj['E9'].value
-    P8_Generate_Optical_Circut     = WS_obj['E10'].value
+    P7_Termination                 = WS_obj['E9'].value
+    P8_Direct_Melt                 = WS_obj['E10'].value
 
     # 根据照片修改ODM和Tray
     global List_Modify_Tray
@@ -142,7 +142,7 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt:
         '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
         WS_obj = WB_obj['OCS_List']
         global List_CS_Data
@@ -442,7 +442,7 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Generate_Jumper or P8_Generate_Optical_Circut:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt:
         for ocs_num in List_CS_Data:
             for box_num in List_Box_Data:
                 if ocs_num['A_Box_Name'] == box_num['Box_Name']:
@@ -634,7 +634,8 @@ def Query_CS_Fiber_IDs(Para_List_CS_Data):
     Response_Body = etree.HTML(Response_Body)
     List_CS_Fiber_IDs = Response_Body.xpath('//@id')
     List_CS_Fiber_IDs.pop(0)
-    Para_List_CS_Data['CS_Fiber_IDs'] = '&'.join(List_CS_Fiber_IDs)
+    # Para_List_CS_Data['CS_Fiber_IDs'] = '&'.join(List_CS_Fiber_IDs)
+    Para_List_CS_Data['CS_Fiber_IDs'] = List_CS_Fiber_IDs
 
 def Query_POS_ID(Para_List_Box_Data):
     URL_Query_POS_ID = 'http://10.209.199.72:7112/irms/opticOpenApplyAction!queryEqu.ilf'
@@ -1014,13 +1015,13 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Execute_Generate_Tray, List_Box_Data)
         print('P6-结束')
 
-    # if (P6_Generate_Tray or
-    #     P7_Generate_Jumper):
-    #     print('查询Cable_Fiber_ID开始')
-    #     Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-    #     print('查询Cable_Fiber_ID结束')
-    # if (P7_Generate_Jumper or 
-    #     P8_Generate_Optical_Circut):
+    if (P7_Termination or
+        P8_Direct_Melt):
+        print('查询Cable_Fiber_ID开始')
+        Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+        print('查询Cable_Fiber_ID结束')
+    # if (P7_Termination or 
+    #     P8_Direct_Melt):
     #     Query_JSESSIONIRMS_and_route()
     #     print('查询POS_ID开始')
     #     Swimming_Pool(Query_POS_ID, List_Box_Data)
@@ -1028,7 +1029,7 @@ def Main_Process(Para_File_Name):
     #     print('查询POS_Port_ID开始')
     #     Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
     #     print('查询POS_Port_ID结束')
-    # if P8_Generate_Optical_Circut:
+    # if P8_Direct_Melt:
     #     Generate_OC_POS_Data_and_OC_Name()
     #     Query_Work_Sheet_ID()
 
@@ -1036,7 +1037,7 @@ def Main_Process(Para_File_Name):
     #     Swimming_Pool(Execute_Termination, List_Box_Data)
     #     Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
     #     print('P6-结束')
-    # if P8_Generate_Optical_Circut:
+    # if P8_Direct_Melt:
     #     print('P8-开始')
     #     Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
     #     print('P8-结束')
@@ -1056,11 +1057,11 @@ if __name__ == '__main__':
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             Generate_Termination_and_Direct_Melt_Data()
             Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-            Query_JSESSIONIRMS_and_route()
-            Swimming_Pool(Query_POS_ID, List_Box_Data)
-            Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-            Generate_OC_POS_Data_and_OC_Name()
-            Query_Work_Sheet_ID()
+            # Query_JSESSIONIRMS_and_route()
+            # Swimming_Pool(Query_POS_ID, List_Box_Data)
+            # Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+            # Generate_OC_POS_Data_and_OC_Name()
+            # Query_Work_Sheet_ID()
 
             # 数据留底
             WB_obj = load_workbook(each_File_Name+'.xlsx')
@@ -1119,7 +1120,7 @@ if __name__ == '__main__':
 
     # for each_box_data in List_Box_Data:
     #     print(each_box_data['POS_IDs'])
-    
+
 
 # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
 
