@@ -86,7 +86,7 @@ def Generate_Local_Data(Para_File_Name):
     P7_Termination                 = WS_obj['E9'].value
     P8_Direct_Melt                 = WS_obj['E10'].value
 
-    # 根据照片修改ODM和Tray
+    # 根据照片修改数据
     global List_Modify_Tray
     List_Modify_Tray = []
     box_num = 0
@@ -314,7 +314,7 @@ def Generate_FS_Data():
                 if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
                     box_info['ODM_Rows'] = box_info['Tray_Count'] = math.ceil(cable_seg_data['Width'] / 12) + box_info['ODM_Rows']
 
-    # 根据照片修改ODM和Tray
+    # 根据照片修改数据
     for box_info in List_Box_Data:
         for modify_tray in List_Modify_Tray:
             if box_info['Box_Name'] == modify_tray[0]:
@@ -369,6 +369,38 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Termination_Count'] = [str(i) for i in box_info['Termination_Count']]
             box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
             box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
+
+    # 根据照片修改数据
+    # Termination_Sequence初步处理
+    for box_info in List_Box_Data:
+        box_info['Termination_Sequence'] = []
+        if isinstance(box_info['Termination_Count'], int): #单条下行光缆
+            for termination_num in range(int(box_info['Termination_Count'])):
+                box_info['Termination_Sequence'].append(termination_num)
+        elif isinstance(box_info['Termination_Count'], list): #多条下行光缆
+            for sub_count in box_info['Termination_Count']:
+                sub_list = []
+                for termination_num in range(int(sub_count)):
+                    sub_list.append(termination_num)
+                box_info['Termination_Sequence'].append(sub_list)
+
+            Int_Termination_Sequence_Pointer = 0
+            List_Termination_Sequence_1D = []
+            box_info['Termination_Sequence_1D'] =[]
+            for sub_list in box_info['Termination_Sequence']:
+                if Int_Termination_Sequence_Pointer % 12 != 0:
+                    for i in range(11):
+                        i += 0
+                        Int_Termination_Sequence_Pointer += 1
+                        if Int_Termination_Sequence_Pointer % 12 == 0:
+                            break
+                for terminal_sequence in sub_list:
+                    List_Termination_Sequence_1D.append(math.ceil(terminal_sequence + Int_Termination_Sequence_Pointer))
+                Int_Termination_Sequence_Pointer += len(sub_list)
+            for terminal_sequence in List_Termination_Sequence_1D:
+                box_info['Termination_Sequence_1D'].append(terminal_sequence)
+            box_info['Termination_Sequence'] = box_info['Termination_Sequence_1D']
+            del box_info['Termination_Sequence_1D']
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -1090,20 +1122,20 @@ if __name__ == '__main__':
                     WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
             # List_OC_Data
-            WS_obj = WB_obj.create_sheet('List_OC_Data')
-            Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-            Column_Num = 0
-            for key in Dic_Column_Name.keys():
-                Column_Num += 1
-                WS_obj.cell(row=1, column=Column_Num, value=key)
-            Row_Num = 1
-            for each_oc_data in List_OC_Data:
-                Row_Num += 1
-                Column_Num = 0
-                dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-                for value in dic_Sorted_OC_Data.values():
-                    Column_Num += 1
-                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+            # WS_obj = WB_obj.create_sheet('List_OC_Data')
+            # Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+            # Column_Num = 0
+            # for key in Dic_Column_Name.keys():
+            #     Column_Num += 1
+            #     WS_obj.cell(row=1, column=Column_Num, value=key)
+            # Row_Num = 1
+            # for each_oc_data in List_OC_Data:
+            #     Row_Num += 1
+            #     Column_Num = 0
+            #     dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+            #     for value in dic_Sorted_OC_Data.values():
+            #         Column_Num += 1
+            #         WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
             WB_obj.save(each_File_Name+'.xlsx')
             WB_obj.close()
