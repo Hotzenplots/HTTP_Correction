@@ -15,7 +15,6 @@ from Crypto.Cipher import AES
 '''
 7013CSV是基础,除P1外都需要
 
-一级箱子DL_2FS_Count,可以考虑放弃使用&
 8120跳纤
 提交工单(理想情况)
 光路设计
@@ -303,7 +302,7 @@ def Generate_FS_Data():
                     for  box_info_2 in List_Box_Data:
                         if cable_num[1] == box_info_2['Box_Name']:
                             DL_2FS_Count_temp.append(str(box_info_2['DL_2FS_Count'] + box_info_2['2FS_Count']))
-                            box_info['DL_2FS_Count'] = '&'.join(DL_2FS_Count_temp)
+                            box_info['DL_2FS_Count'] = DL_2FS_Count_temp
     #ODM_Rows$Tray_Count
     for box_info in List_Box_Data:
         if box_info['1FS_Count'] == 0:
@@ -345,14 +344,13 @@ def Generate_Termination_and_Direct_Melt_Data():
                 if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
                     List_Width.append(cable_seg_data['Width'])
 
-            List_DL_2FS = box_info['DL_2FS_Count'].split('&')
             box_info['BackUp_Fiber_Count'] = []
             box_info['Termination_Start'] = []
             box_info['Termination_Count'] = []
             box_info['Direct_Melt_Start'] = []
             box_info['Direct_Melt_Count'] = []
 
-            for each_DL_2FS, each_Width in zip(List_DL_2FS, List_Width):
+            for each_DL_2FS, each_Width in zip(box_info['DL_2FS_Count'], List_Width):
                 if each_Width >= (box_info['2FS_Count'] * 3 + int(each_DL_2FS) * 3):
                     box_info['BackUp_Fiber_Count'].append(2)
                 elif (each_Width < (box_info['2FS_Count'] * 3 + int(each_DL_2FS) * 3)) and (each_Width >= (box_info['2FS_Count'] * 2 + int(each_DL_2FS) * 2)):
@@ -360,7 +358,7 @@ def Generate_Termination_and_Direct_Melt_Data():
                 else:
                     box_info['BackUp_Fiber_Count'].append(0)
             
-            for each_BackUp_Fiber_Count, each_DL_2FS in zip(box_info['BackUp_Fiber_Count'], List_DL_2FS):
+            for each_BackUp_Fiber_Count, each_DL_2FS in zip(box_info['BackUp_Fiber_Count'], box_info['DL_2FS_Count']):
                 box_info['Termination_Start'].append(1)
                 box_info['Termination_Count'].append(int(each_DL_2FS) * (int(each_BackUp_Fiber_Count) + 1))
                 box_info['Direct_Melt_Start'] = '0'
@@ -371,12 +369,6 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Termination_Count'] = [str(i) for i in box_info['Termination_Count']]
             box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
             box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
-
-            box_info['BackUp_Fiber_Count'] = '&'.join(box_info['BackUp_Fiber_Count'])
-            box_info['Termination_Start'] = '&'.join(box_info['Termination_Start'])
-            box_info['Termination_Count'] = '&'.join(box_info['Termination_Count'])
-            box_info['Direct_Melt_Start'] = '&'.join(box_info['Direct_Melt_Start'])
-            box_info['Direct_Melt_Count'] = '&'.join(box_info['Direct_Melt_Count'])
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -620,7 +612,7 @@ def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
     List_Terminal_IDs = Response_Body.xpath('//@id')
     List_Terminal_IDs.pop(0)
     Para_List_Box_Data['ODM_ID'] = List_Terminal_IDs.pop(0)
-    Para_List_Box_Data['Terminal_IDs'] = '&'.join(List_Terminal_IDs)
+    Para_List_Box_Data['Terminal_IDs'] = List_Terminal_IDs
 
 def Query_CS_Fiber_IDs(Para_List_CS_Data):
     URL_Query_CS_Fiber_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
@@ -634,7 +626,6 @@ def Query_CS_Fiber_IDs(Para_List_CS_Data):
     Response_Body = etree.HTML(Response_Body)
     List_CS_Fiber_IDs = Response_Body.xpath('//@id')
     List_CS_Fiber_IDs.pop(0)
-    # Para_List_CS_Data['CS_Fiber_IDs'] = '&'.join(List_CS_Fiber_IDs)
     Para_List_CS_Data['CS_Fiber_IDs'] = List_CS_Fiber_IDs
 
 def Query_POS_ID(Para_List_Box_Data):
@@ -816,7 +807,7 @@ def Execute_Generate_Tray(Para_List_Box_Data):
     Response_Body = etree.HTML(Response_Body)
     List_Terminal_IDs = Response_Body.xpath('//terminal//@int_id')
     print('P5-Terminal_IDs_Count-{}-{}'.format(len(List_Terminal_IDs), Para_List_Box_Data['Box_Name']))
-    Para_List_Box_Data['Terminal_IDs'] = '&'.join(List_Terminal_IDs)
+    Para_List_Box_Data['Terminal_IDs'] = List_Terminal_IDs
 
 def Execute_Termination(Para_List_Box_Data):
 
