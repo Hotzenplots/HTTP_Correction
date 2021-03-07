@@ -321,6 +321,8 @@ def Generate_FS_Data():
                  box_info['ODM_Rows'] = box_info['Tray_Count'] = modify_tray[1]
 
 def Generate_Termination_and_Direct_Melt_Data():
+
+    # 生成基本上架直熔数据
     for box_info in List_Box_Data:
         if box_info['1FS_Count'] == 0:
             for cable_seg_data in List_CS_Data:
@@ -370,37 +372,38 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
             box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
 
-    # 根据照片修改数据
     # Termination_Sequence初步处理
     for box_info in List_Box_Data:
         box_info['Termination_Sequence'] = []
         if isinstance(box_info['Termination_Count'], int): #单条下行光缆
-            for termination_num in range(int(box_info['Termination_Count'])):
-                box_info['Termination_Sequence'].append(termination_num)
-        elif isinstance(box_info['Termination_Count'], list): #多条下行光缆
-            for sub_count in box_info['Termination_Count']:
-                sub_list = []
-                for termination_num in range(int(sub_count)):
-                    sub_list.append(termination_num)
-                box_info['Termination_Sequence'].append(sub_list)
+            for terminal_sequence in range(int(box_info['Termination_Count'])):
+                box_info['Termination_Sequence'].append(terminal_sequence)
 
-            Int_Termination_Sequence_Pointer = 0
-            List_Termination_Sequence_1D = []
-            box_info['Termination_Sequence_1D'] =[]
-            for sub_list in box_info['Termination_Sequence']:
-                if Int_Termination_Sequence_Pointer % 12 != 0:
-                    for i in range(11):
-                        i += 0
-                        Int_Termination_Sequence_Pointer += 1
-                        if Int_Termination_Sequence_Pointer % 12 == 0:
-                            break
-                for terminal_sequence in sub_list:
-                    List_Termination_Sequence_1D.append(math.ceil(terminal_sequence + Int_Termination_Sequence_Pointer))
-                Int_Termination_Sequence_Pointer += len(sub_list)
-            for terminal_sequence in List_Termination_Sequence_1D:
-                box_info['Termination_Sequence_1D'].append(terminal_sequence)
-            box_info['Termination_Sequence'] = box_info['Termination_Sequence_1D']
-            del box_info['Termination_Sequence_1D']
+        elif isinstance(box_info['Termination_Count'], list): #多条下行光缆
+
+            Int_Termination_Sequence_Pointer = 0 # 利用指针生成上架数据
+            box_info['Termination_Sequence'] = []
+
+            for sub_count, sub_backup_fiber_count in zip(box_info['Termination_Count'], box_info['BackUp_Fiber_Count']):
+                for terminal_sequence in range(int(sub_count)):
+                    if Int_Termination_Sequence_Pointer % 12 != 0:
+                        for i in range(11):
+                            i += 0
+                            Int_Termination_Sequence_Pointer += 1
+                            if Int_Termination_Sequence_Pointer % 12 == 0:
+                                break
+                        
+                    # 丢弃空上架
+                    if (terminal_sequence % (int(sub_backup_fiber_count) + 1) != 0):
+                        continue
+
+                    box_info['Termination_Sequence'].append(terminal_sequence + Int_Termination_Sequence_Pointer)
+                Int_Termination_Sequence_Pointer += int(sub_count)
+
+            # 备芯 Sequence 为了验证数据方便,使用了Termination_Start
+            box_info['Termination_Start'] = list(set(range(len(box_info['Termination_Sequence']) * 3)).difference(set(box_info['Termination_Sequence'])))
+
+            # 根据照片修改数据
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -1043,6 +1046,8 @@ def Main_Process(Para_File_Name):
         print('查询Cable_Fiber_ID开始')
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         print('查询Cable_Fiber_ID结束')
+        Generate_Termination_and_Direct_Melt_Data()
+
     # if (P7_Termination or 
     #     P8_Direct_Melt):
     #     Query_JSESSIONIRMS_and_route()
@@ -1078,8 +1083,8 @@ if __name__ == '__main__':
             Generate_Topology()
             Generate_FS_Data()
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
-            Generate_Termination_and_Direct_Melt_Data()
             Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+            Generate_Termination_and_Direct_Melt_Data()
             # Query_JSESSIONIRMS_and_route()
             # Swimming_Pool(Query_POS_ID, List_Box_Data)
             # Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
