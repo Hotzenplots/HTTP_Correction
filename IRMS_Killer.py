@@ -68,30 +68,30 @@ def Generate_Local_Data(Para_File_Name):
 
     '''读取并整理Sheet_Info,生成List_Box_Type和其他参数'''
     WS_obj = WB_obj['Info']
-    Longitude_Start = WS_obj['B1'].value
-    Latitude_Start = WS_obj['B2'].value
-    Horizontal_Density = WS_obj['B3'].value
-    Vertical_Density = WS_obj['B4'].value
+    Longitude_Start     = WS_obj['B1'].value
+    Latitude_Start      = WS_obj['B2'].value
+    Horizontal_Density  = WS_obj['B3'].value
+    Vertical_Density    = WS_obj['B4'].value
     Anchor_Point_Buttom = WS_obj['B5'].value
-    Anchor_Point_Right = WS_obj['B6'].value
+    Anchor_Point_Right  = WS_obj['B6'].value
 
     global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt
-    P0_Data_Check                  = WS_obj['E2'].value
-    P1_Push_Box                    = WS_obj['E3'].value
-    P2_Generate_Support_Segment    = WS_obj['E4'].value
-    P3_Generate_Cable_Segment      = WS_obj['E5'].value
-    P4_Cable_Lay                   = WS_obj['E6'].value
-    P5_Generate_ODM                = WS_obj['E7'].value
-    P6_Generate_Tray               = WS_obj['E8'].value
-    P7_Termination                 = WS_obj['E9'].value
-    P8_Direct_Melt                 = WS_obj['E10'].value
+    P0_Data_Check               = WS_obj['E2'].value
+    P1_Push_Box                 = WS_obj['E3'].value
+    P2_Generate_Support_Segment = WS_obj['E4'].value
+    P3_Generate_Cable_Segment   = WS_obj['E5'].value
+    P4_Cable_Lay                = WS_obj['E6'].value
+    P5_Generate_ODM             = WS_obj['E7'].value
+    P6_Generate_Tray            = WS_obj['E8'].value
+    P7_Termination              = WS_obj['E9'].value
+    P8_Direct_Melt              = WS_obj['E10'].value
 
     # 根据照片修改数据
-    global List_Modify_Tray
-    List_Modify_Tray = []
+    global List_Modify_For_Photo
+    List_Modify_For_Photo = []
     box_num = 0
     while WS_obj[('D' + str(20 + box_num))].value:
-        List_Modify_Tray.append([WS_obj[('D' + str(20 + box_num))].value, WS_obj[('E' + str(20 + box_num))].value])
+        List_Modify_For_Photo.append([WS_obj[('D' + str(20 + box_num))].value, WS_obj[('E' + str(20 + box_num))].value, WS_obj[('F' + str(20 + box_num))].value])
         box_num += 1
 
     List_Box_Type = []
@@ -316,7 +316,7 @@ def Generate_FS_Data():
 
     # 根据照片修改数据
     for box_info in List_Box_Data:
-        for modify_tray in List_Modify_Tray:
+        for modify_tray in List_Modify_For_Photo:
             if box_info['Box_Name'] == modify_tray[0]:
                  box_info['ODM_Rows'] = box_info['Tray_Count'] = modify_tray[1]
 
@@ -380,30 +380,56 @@ def Generate_Termination_and_Direct_Melt_Data():
                 box_info['Termination_Sequence'].append(terminal_sequence)
 
         elif isinstance(box_info['Termination_Count'], list): #多条下行光缆
+            # 判断是否自定义上架
+            for modify_termination in List_Modify_For_Photo:
+                if box_info['Box_Name'] == modify_termination[0]:
+                    I_Have_a_Photo = True
+                    List_Photo_Termination = [math.ceil(int(i)) for i in list(modify_termination[2].split(','))]
+                    break
+            if len(List_Modify_For_Photo) == 0:
+                I_Have_a_Photo = False
 
             Int_Termination_Sequence_Pointer = 0 # 利用指针生成上架数据
             box_info['Termination_Sequence'] = []
-
             for sub_count, sub_backup_fiber_count in zip(box_info['Termination_Count'], box_info['BackUp_Fiber_Count']):
                 for terminal_sequence in range(int(sub_count)):
+
+                    # 操作指针
                     if Int_Termination_Sequence_Pointer % 12 != 0:
                         for i in range(11):
                             i += 0
                             Int_Termination_Sequence_Pointer += 1
                             if Int_Termination_Sequence_Pointer % 12 == 0:
                                 break
-                        
+                    
+                    # if I_Have_a_Photo:
                     # 丢弃空上架
                     if (terminal_sequence % (int(sub_backup_fiber_count) + 1) != 0):
                         continue
-
-                    box_info['Termination_Sequence'].append(terminal_sequence + Int_Termination_Sequence_Pointer)
+                    
+                    if not I_Have_a_Photo:
+                        # 写入上架
+                        box_info['Termination_Sequence'].append(terminal_sequence + Int_Termination_Sequence_Pointer)
+                    else:
+                        box_info['Termination_Sequence'] = List_Photo_Termination
                 Int_Termination_Sequence_Pointer += int(sub_count)
 
+            # if I_Have_a_Photo:
             # 备芯 Sequence 为了验证数据方便,使用了Termination_Start
             box_info['Termination_Start'] = list(set(range(len(box_info['Termination_Sequence']) * 3)).difference(set(box_info['Termination_Sequence'])))
+            while len(box_info['Termination_Start']) != (len(box_info['Termination_Sequence']) * 2):
+                box_info['Termination_Start'].pop()
 
-            # 根据照片修改数据
+            # 处理纤芯 为了验证数据方便,使用了Direct_Melt_Count
+            List_CS_Fiber_IDs =[]
+            box_info['Direct_Melt_Count'] = []
+            for cable_seg_data in List_CS_Data:
+                if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
+                    List_CS_Fiber_IDs.append(cable_seg_data['CS_Fiber_IDs'])
+            for sub_count, sub_list in zip(box_info['Termination_Count'], List_CS_Fiber_IDs):
+                List_Fiber_IDs = sub_list[0:int(sub_count)]
+                for fiber_id in List_Fiber_IDs:
+                    box_info['Direct_Melt_Count'].append(fiber_id)
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
