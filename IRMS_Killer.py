@@ -457,6 +457,11 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Direct_Melt_Start'] = List_Fiber_Combined_Occupied
             box_info['Direct_Melt_Count'] = List_Fiber_Combined_Free
 
+        if box_info['Box_Type'] == 'guangfenxianxiang':
+            box_info['Box_Type_Short'] = 'gfxx'
+        elif box_info['Box_Type'] == 'guangjiaojiexiang':
+            box_info['Box_Type_Short'] = 'gjjx'
+
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
     for each_oc_data in List_OC_Data:
@@ -1030,7 +1035,9 @@ def Main_Process(Para_File_Name):
         P3_Generate_Cable_Segment or 
         P4_Cable_Lay or 
         P5_Generate_ODM or 
-        P6_Generate_Tray):
+        P6_Generate_Tray or
+        P7_Termination or
+        P8_Direct_Melt):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
@@ -1061,7 +1068,9 @@ def Main_Process(Para_File_Name):
         Execute_Generate_Cable_Segment()
         print('P3-结束')
 
-    if P4_Cable_Lay:
+    if (P4_Cable_Lay or
+        P7_Termination or
+        P8_Direct_Melt):
         if (not ('Support_Seg_ID' in List_CS_Data[0])) or (not ('Cable_Seg_ID' in List_CS_Data[0])):
             print('查询Support_Seg_ID/Cable_Seg_ID开始')
             Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
@@ -1072,8 +1081,10 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Execute_Cable_Lay, List_CS_Data)
         print('P4-结束')
 
-    if (P5_Generate_ODM or 
-        P6_Generate_Tray):
+    if (P5_Generate_ODM or
+        P6_Generate_Tray or
+        P7_Termination or
+        P8_Direct_Melt):
         Generate_Topology()
         Generate_FS_Data()
 
@@ -1082,7 +1093,9 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Execute_Generate_ODM, List_Box_Data)
         print('P5-结束')
 
-    if P6_Generate_Tray: # 单独添加托盘需要查询
+    if (P6_Generate_Tray or
+        P7_Termination or
+        P8_Direct_Melt): # 单独添加托盘需要查询
         if not ('ODM_ID' in List_Box_Data[0]):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
@@ -1099,6 +1112,9 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         print('查询Cable_Fiber_ID结束')
         Generate_Termination_and_Direct_Melt_Data()
+        print('111')
+    #     Swimming_Pool(Execute_Termination, List_Box_Data)
+    #     Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
 
     # if (P7_Termination or 
     #     P8_Direct_Melt):
@@ -1113,10 +1129,8 @@ def Main_Process(Para_File_Name):
     #     Generate_OC_POS_Data_and_OC_Name()
     #     Query_Work_Sheet_ID()
 
-    #     print('P6-开始')
-    #     Swimming_Pool(Execute_Termination, List_Box_Data)
-    #     Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
-    #     print('P6-结束')
+
+
     # if P8_Direct_Melt:
     #     print('P8-开始')
     #     Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
