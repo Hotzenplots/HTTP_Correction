@@ -339,6 +339,7 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Direct_Melt_Count'] = box_info['DL_2FS_Count'] * (box_info['BackUp_Fiber_Count'] + 1)
             if box_info['Direct_Melt_Count'] == 0: #尾箱没有直熔数据
                 box_info['Direct_Melt_Start'] = 0
+
         elif box_info['1FS_Count'] != 0:
 
             List_Width = []
@@ -372,7 +373,7 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
             box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
 
-    # Termination_Sequence初步处理
+    # Termination_Sequence处理
     for box_info in List_Box_Data:
         box_info['Termination_Sequence'] = []
         if isinstance(box_info['Termination_Count'], int): #单条下行光缆
@@ -386,7 +387,6 @@ def Generate_Termination_and_Direct_Melt_Data():
                 if box_info['Box_Name'] == cable_seg_data['Z_Box_Name']:
                     List_CS_Fiber_IDs = cable_seg_data['CS_Fiber_IDs']
             box_info['Termination_Fiber_IDs'] = List_CS_Fiber_IDs[0:int(box_info['Termination_Count'])]
-
 
         elif isinstance(box_info['Termination_Count'], list): #多条下行光缆
             # 判断是否自定义上架
@@ -440,8 +440,22 @@ def Generate_Termination_and_Direct_Melt_Data():
                 for fiber_id in List_Fiber_IDs:
                     box_info['Termination_Fiber_IDs'].append(fiber_id)
 
-            # 再次分离占用与备芯,分离上架list和备芯list,分两次上架
-            
+            # 再次分离占用与备芯,分离上架list和备芯list,分两次上架,数据写入Direct_Melt_Start,Direct_Melt_Count
+            List_All_Termination_Sequence = box_info['Termination_Start'] + box_info['Termination_Sequence']
+            List_All_Termination_Sequence.sort()
+            List_Termination_Fiber_IDs = box_info['Termination_Fiber_IDs']
+            List_Combined = list(zip(List_All_Termination_Sequence,List_Termination_Fiber_IDs))
+            List_Fiber_Combined_Occupied = []
+            List_Fiber_Combined_Free     = []
+            for set_num in range(len(List_Combined)):
+                for terminal_sequence in box_info['Termination_Sequence']:
+                    if int(List_Combined[set_num][0]) == int(terminal_sequence):
+                        List_Fiber_Combined_Occupied.append(List_Combined[set_num])
+                        break
+            List_Fiber_Combined_Free = list(set(List_Combined) - set(List_Fiber_Combined_Occupied))
+            List_Fiber_Combined_Free.sort()
+            box_info['Direct_Melt_Start'] = List_Fiber_Combined_Occupied
+            box_info['Direct_Melt_Count'] = List_Fiber_Combined_Free
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
