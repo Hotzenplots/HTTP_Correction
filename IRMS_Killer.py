@@ -379,6 +379,15 @@ def Generate_Termination_and_Direct_Melt_Data():
             for terminal_sequence in range(int(box_info['Termination_Count'])):
                 box_info['Termination_Sequence'].append(terminal_sequence)
 
+            # 处理纤芯
+            List_CS_Fiber_IDs =[]
+            box_info['Termination_Fiber_IDs'] = []
+            for cable_seg_data in List_CS_Data:
+                if box_info['Box_Name'] == cable_seg_data['Z_Box_Name']:
+                    List_CS_Fiber_IDs = cable_seg_data['CS_Fiber_IDs']
+            box_info['Termination_Fiber_IDs'] = List_CS_Fiber_IDs[0:int(box_info['Termination_Count'])]
+
+
         elif isinstance(box_info['Termination_Count'], list): #多条下行光缆
             # 判断是否自定义上架
             for modify_termination in List_Modify_For_Photo:
@@ -422,14 +431,17 @@ def Generate_Termination_and_Direct_Melt_Data():
 
             # 处理纤芯 为了验证数据方便,使用了Direct_Melt_Count
             List_CS_Fiber_IDs =[]
-            box_info['Direct_Melt_Count'] = []
+            box_info['Termination_Fiber_IDs'] = []
             for cable_seg_data in List_CS_Data:
                 if box_info['Box_Name'] == cable_seg_data['A_Box_Name']:
                     List_CS_Fiber_IDs.append(cable_seg_data['CS_Fiber_IDs'])
             for sub_count, sub_list in zip(box_info['Termination_Count'], List_CS_Fiber_IDs):
                 List_Fiber_IDs = sub_list[0:int(sub_count)]
                 for fiber_id in List_Fiber_IDs:
-                    box_info['Direct_Melt_Count'].append(fiber_id)
+                    box_info['Termination_Fiber_IDs'].append(fiber_id)
+
+            # 再次分离占用与备芯,分离上架list和备芯list,分两次上架
+            
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
