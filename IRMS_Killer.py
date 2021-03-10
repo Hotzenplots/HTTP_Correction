@@ -322,8 +322,14 @@ def Generate_FS_Data():
 
 def Generate_Termination_and_Direct_Melt_Data():
 
-    # 生成基本上架直熔数据
     for box_info in List_Box_Data:
+
+        if box_info['Box_Type'] == 'guangfenxianxiang':
+            box_info['Box_Type_Short'] = 'gfxx'
+        elif box_info['Box_Type'] == 'guangjiaojiexiang':
+            box_info['Box_Type_Short'] = 'gjjx'
+
+        # 基本上架直熔数据
         if box_info['1FS_Count'] == 0:
             for cable_seg_data in List_CS_Data:
                 if box_info['Box_Name'] == cable_seg_data['Z_Box_Name']:
@@ -373,8 +379,8 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
             box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
 
-    # Termination_Sequence处理
-    for box_info in List_Box_Data:
+        # Termination_Sequence处理
+
         box_info['Termination_Sequence'] = []
         if isinstance(box_info['Termination_Count'], int): #单条下行光缆
             for terminal_sequence in range(int(box_info['Termination_Count'])):
@@ -389,18 +395,10 @@ def Generate_Termination_and_Direct_Melt_Data():
             box_info['Termination_Fiber_IDs'] = List_CS_Fiber_IDs[0:int(box_info['Termination_Count'])]
 
         elif isinstance(box_info['Termination_Count'], list): #多条下行光缆
-            # 判断是否自定义上架
-            for modify_termination in List_Modify_For_Photo:
-                if box_info['Box_Name'] == modify_termination[0]:
-                    I_Have_a_Photo = True
-                    List_Photo_Termination = [math.ceil(int(i)) for i in list(modify_termination[2].split(','))]
-                    break
-            if len(List_Modify_For_Photo) == 0:
-                I_Have_a_Photo = False
 
             Int_Termination_Sequence_Pointer = 0 # 利用指针生成上架数据
             box_info['Termination_Sequence'] = []
-            for sub_count, sub_backup_fiber_count in zip(box_info['Termination_Count'], box_info['BackUp_Fiber_Count']):
+            for sub_count in box_info['Termination_Count']:
                 for terminal_sequence in range(int(sub_count)):
 
                     # 操作指针
@@ -410,26 +408,12 @@ def Generate_Termination_and_Direct_Melt_Data():
                             Int_Termination_Sequence_Pointer += 1
                             if Int_Termination_Sequence_Pointer % 12 == 0:
                                 break
-                    
-                    # if I_Have_a_Photo:
-                    # 丢弃空上架
-                    if (terminal_sequence % (int(sub_backup_fiber_count) + 1) != 0):
-                        continue
-                    
-                    if not I_Have_a_Photo:
-                        # 写入上架
-                        box_info['Termination_Sequence'].append(terminal_sequence + Int_Termination_Sequence_Pointer)
-                    else:
-                        box_info['Termination_Sequence'] = List_Photo_Termination
+
+                    # 写入上架
+                    box_info['Termination_Sequence'].append(terminal_sequence + Int_Termination_Sequence_Pointer)
                 Int_Termination_Sequence_Pointer += int(sub_count)
 
-            # if I_Have_a_Photo:
-            # 备芯 Sequence 为了验证数据方便,使用了Termination_Start
-            box_info['Termination_Start'] = list(set(range(len(box_info['Termination_Sequence']) * 3)).difference(set(box_info['Termination_Sequence'])))
-            while len(box_info['Termination_Start']) != (len(box_info['Termination_Sequence']) * 2):
-                box_info['Termination_Start'].pop()
-
-            # 处理纤芯 为了验证数据方便,使用了Direct_Melt_Count
+            # 处理纤芯
             List_CS_Fiber_IDs =[]
             box_info['Termination_Fiber_IDs'] = []
             for cable_seg_data in List_CS_Data:
@@ -440,27 +424,31 @@ def Generate_Termination_and_Direct_Melt_Data():
                 for fiber_id in List_Fiber_IDs:
                     box_info['Termination_Fiber_IDs'].append(fiber_id)
 
-            # 再次分离占用与备芯,分离上架list和备芯list,分两次上架,数据写入Direct_Melt_Start,Direct_Melt_Count
-            List_All_Termination_Sequence = box_info['Termination_Start'] + box_info['Termination_Sequence']
-            List_All_Termination_Sequence.sort()
-            List_Termination_Fiber_IDs = box_info['Termination_Fiber_IDs']
-            List_Combined = list(zip(List_All_Termination_Sequence,List_Termination_Fiber_IDs))
-            List_Fiber_Combined_Occupied = []
-            List_Fiber_Combined_Free     = []
-            for set_num in range(len(List_Combined)):
-                for terminal_sequence in box_info['Termination_Sequence']:
-                    if int(List_Combined[set_num][0]) == int(terminal_sequence):
-                        List_Fiber_Combined_Occupied.append(List_Combined[set_num])
-                        break
-            List_Fiber_Combined_Free = list(set(List_Combined) - set(List_Fiber_Combined_Occupied))
-            List_Fiber_Combined_Free.sort()
-            box_info['Direct_Melt_Start'] = List_Fiber_Combined_Occupied
-            box_info['Direct_Melt_Count'] = List_Fiber_Combined_Free
+            # 端子纤芯对应(不看照片的话,这里的数据可以直接上架)
+            List_Fiber_ID_and_Terminal_ID_All = []
+            for fiber_sequence in range(len(box_info['Termination_Sequence'])):
+                List_Fiber_ID_and_Terminal_ID_All.append(list([box_info['Termination_Sequence'][fiber_sequence],box_info['Terminal_IDs'][int(box_info['Termination_Sequence'][fiber_sequence])],fiber_sequence,box_info['Termination_Fiber_IDs'][fiber_sequence]]))
 
-        if box_info['Box_Type'] == 'guangfenxianxiang':
-            box_info['Box_Type_Short'] = 'gfxx'
-        elif box_info['Box_Type'] == 'guangjiaojiexiang':
-            box_info['Box_Type_Short'] = 'gjjx'
+            # 分离占用与备芯
+            # slice数据
+            List_Fiber_ID_and_Terminal_ID_Occupied = []
+            List_Fiber_ID_and_Terminal_ID_Free = copy.deepcopy(List_Fiber_ID_and_Terminal_ID_All)
+            List_Slice_Data = []
+            for sub_count, sub_backup_fiber_count in zip(box_info['Termination_Count'], box_info['BackUp_Fiber_Count']):
+                List_Slice_Data.append([(int(sub_backup_fiber_count) + 1), int(sub_count)])
+            Int_Terminaion_Slice_Pointer = 0
+            for sub_list in List_Slice_Data:
+                for num in range(int(0 + Int_Terminaion_Slice_Pointer),int(sub_list[1] + Int_Terminaion_Slice_Pointer),int(sub_list[0])):
+                    List_Fiber_ID_and_Terminal_ID_Occupied.append(List_Fiber_ID_and_Terminal_ID_All[num])
+                Int_Terminaion_Slice_Pointer += sub_list[1]
+            for sub_list_all in List_Fiber_ID_and_Terminal_ID_Free:
+                for sub_list_occupied in List_Fiber_ID_and_Terminal_ID_Occupied:
+                    if sub_list_all == sub_list_occupied:
+                        List_Fiber_ID_and_Terminal_ID_Free.remove(sub_list_all)
+            # 注意!注意!注意!
+            box_info['Direct_Melt_Count'] = List_Fiber_ID_and_Terminal_ID_Occupied
+            box_info['Direct_Melt_Start'] = List_Fiber_ID_and_Terminal_ID_Free
+
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -905,71 +893,31 @@ def Execute_Termination(Para_List_Box_Data):
 
     if Para_List_Box_Data['1FS_Count'] == 0:
 
-        List_Terminal_IDs = Para_List_Box_Data['Terminal_IDs'].split('&')
-
-        if Para_List_Box_Data['Box_Type'] == 'guangfenxianxiang':
-            Para_List_Box_Data['Box_Type_Short'] = 'gfxx'
-        elif Para_List_Box_Data['Box_Type'] == 'guangjiaojiexiang':
-            Para_List_Box_Data['Box_Type_Short'] = 'gjjx'
-
-        for cable_seg_data in List_CS_Data:
-            if Para_List_Box_Data['Box_Name'] == cable_seg_data['Z_Box_Name']:
-                List_CS_Fiber_IDs = cable_seg_data['CS_Fiber_IDs'].split('&')
-
         termination_datas = []
         for termination_num in range(Para_List_Box_Data['Termination_Count']):
-            termination_data = '<param fiber_id="'+str(List_CS_Fiber_IDs[termination_num])+'" z_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" z_equ_type="'+str(Para_List_Box_Data['Box_Type_Short'])+'" z_port_id="'+str(List_Terminal_IDs[termination_num])+'" a_equ_id="" a_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Termination_Fiber_IDs'][termination_num])+'" z_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" z_equ_type="'+str(Para_List_Box_Data['Box_Type_Short'])+'" z_port_id="'+str(Para_List_Box_Data['Terminal_IDs'][termination_num])+'" a_equ_id="" a_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
             termination_datas.append(termination_data)
-
         Form_Info_Body = ''.join(termination_datas)
 
     elif Para_List_Box_Data['1FS_Count'] != 0:
 
-        List_CS_Fiber_IDs_Joined = []
-        for cable_seg_data in List_CS_Data:
-            if Para_List_Box_Data['Box_Name'] == cable_seg_data['A_Box_Name']:
-                List_CS_Fiber_IDs_Joined.append(cable_seg_data['CS_Fiber_IDs'])
-        List_CS_Fiber_IDs_Separated = [i.split('&') for i in List_CS_Fiber_IDs_Joined]
-
-        List_Termination_Count = Para_List_Box_Data['Termination_Count'].split('&')
-
-        List_Terminal_IDs = Para_List_Box_Data['Terminal_IDs'].split('&')
-
-        if Para_List_Box_Data['Box_Type'] == 'guangfenxianxiang':
-            Para_List_Box_Data['Box_Type_Short'] = 'gfxx'
-        elif Para_List_Box_Data['Box_Type'] == 'guangjiaojiexiang':
-            Para_List_Box_Data['Box_Type_Short'] = 'gjjx'
-
-        Termination_Pointer = 0
         termination_datas = []
-        for each_Termination_Count, each_CS_Fiber_IDs in zip(List_Termination_Count, List_CS_Fiber_IDs_Separated):
-
-            if Termination_Pointer % 12 != 0:
-                for i in range(11):
-                    i += 0
-                    Termination_Pointer += 1
-                    if Termination_Pointer % 12 == 0:
-                        break
-
-            for termination_num in range(int(each_Termination_Count)):
-                termination_data = '<param fiber_id="'+str(each_CS_Fiber_IDs[termination_num])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(List_Terminal_IDs[Termination_Pointer])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
-                Termination_Pointer += 1
-                termination_datas.append(termination_data)
-
-            Form_Info_Body = ''.join(termination_datas)
-
-    URL_Termination = 'http://10.209.199.74:8120/igisserver_osl/rest/jumperandfiber/saveFiber'
-    Form_Info_Head = '<params>'
-    Form_Info_Butt = '</params>'
-    Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
-    Request_Lenth = str(len(Form_Info_Encoded))
-    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Termination, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
-    List_Termination_State = Response_Body.xpath('//@msg')
-    print('P6-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
+        for termination_num in range(int(len(Para_List_Box_Data['Direct_Melt_Count']))):
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
+            termination_datas.append(termination_data)
+        Form_Info_Body = ''.join(termination_datas)
+    # URL_Termination = 'http://10.209.199.74:8120/igisserver_osl/rest/jumperandfiber/saveFiber'
+    # Form_Info_Head = '<params>'
+    # Form_Info_Butt = '</params>'
+    # Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
+    # Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
+    # Request_Lenth = str(len(Form_Info_Encoded))
+    # Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    # Response_Body = requests.post(URL_Termination, data=Form_Info_Encoded, headers=Request_Header)
+    # Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    # Response_Body = etree.HTML(Response_Body)
+    # List_Termination_State = Response_Body.xpath('//@msg')
+    # print('P6-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
 def Execute_Direct_Melt(Para_List_Box_Data):
     if Para_List_Box_Data['1FS_Count'] == 0:
@@ -1112,8 +1060,7 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         print('查询Cable_Fiber_ID结束')
         Generate_Termination_and_Direct_Melt_Data()
-        print('111')
-    #     Swimming_Pool(Execute_Termination, List_Box_Data)
+        Swimming_Pool(Execute_Termination, List_Box_Data)
     #     Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
 
     # if (P7_Termination or 
