@@ -956,33 +956,28 @@ def Execute_Termination(Para_List_Box_Data):
             termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
             termination_datas.append(termination_data)
         Form_Info_Body = ''.join(termination_datas)
-        
-    # URL_Termination = 'http://10.209.199.74:8120/igisserver_osl/rest/jumperandfiber/saveFiber'
-    # Form_Info_Head = '<params>'
-    # Form_Info_Butt = '</params>'
-    # Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    # Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
-    # Request_Lenth = str(len(Form_Info_Encoded))
-    # Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-    # Response_Body = requests.post(URL_Termination, data=Form_Info_Encoded, headers=Request_Header)
-    # Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    # Response_Body = etree.HTML(Response_Body)
-    # List_Termination_State = Response_Body.xpath('//@msg')
-    # print('P6-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
+
+    URL_Termination = 'http://10.209.199.74:8120/igisserver_osl/rest/jumperandfiber/saveFiber'
+    Form_Info_Head = '<params>'
+    Form_Info_Butt = '</params>'
+    Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
+    Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
+    Request_Lenth = str(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Termination, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_Termination_State = Response_Body.xpath('//@msg')
+    print('P6-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
 def Execute_Direct_Melt(Para_List_Box_Data):
     if Para_List_Box_Data['1FS_Count'] == 0:
 
         for cable_seg_data in List_CS_Data:
             if Para_List_Box_Data['Box_Name'] == cable_seg_data['Z_Box_Name']:
-                List_UL_CS_Fiber_IDs = cable_seg_data['CS_Fiber_IDs'].split('&')
+                List_UL_CS_Fiber_IDs = cable_seg_data['CS_Fiber_IDs']
             if Para_List_Box_Data['Box_Name'] == cable_seg_data['A_Box_Name']:
-                List_DL_CS_Fiber_IDs = cable_seg_data['CS_Fiber_IDs'].split('&')
-            
-        if Para_List_Box_Data['Box_Type'] == 'guangfenxianxiang':
-            Para_List_Box_Data['Box_Type_Short'] = 'gfxx'
-        elif Para_List_Box_Data['Box_Type'] == 'guangjiaojiexiang':
-            Para_List_Box_Data['Box_Type_Short'] = 'gjjx'
+                List_DL_CS_Fiber_IDs = cable_seg_data['CS_Fiber_IDs']
 
         URL_Direct_Melt = 'http://10.209.199.74:8120/igisserver_osl/rest/fibercorekiss/fiberKiss'
 
@@ -1111,8 +1106,12 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         print('查询Cable_Fiber_ID结束')
         Generate_Termination_and_Direct_Melt_Data()
+
+    if P7_Termination:
         Swimming_Pool(Execute_Termination, List_Box_Data)
-    #     Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
+
+    if P8_Direct_Melt:
+        Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
 
     # if (P7_Termination or 
     #     P8_Direct_Melt):
