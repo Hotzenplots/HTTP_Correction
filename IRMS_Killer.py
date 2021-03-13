@@ -13,13 +13,9 @@ from collections import Counter
 from Crypto.Cipher import AES
 
 '''
-7013CSV是基础,除P1外都需要
-
-8120跳纤
 提交工单(理想情况)
 光路设计
 工单号写入(含工单建立)
-重新考虑上架直熔以及跳纤的占用策略,实现定点占用
 '''
 
 File_Name = ['峪峰花园小']
@@ -75,7 +71,7 @@ def Generate_Local_Data(Para_File_Name):
     Anchor_Point_Buttom = WS_obj['B5'].value
     Anchor_Point_Right  = WS_obj['B6'].value
 
-    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt
+    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit
     P0_Data_Check               = WS_obj['E2'].value
     P1_Push_Box                 = WS_obj['E3'].value
     P2_Generate_Support_Segment = WS_obj['E4'].value
@@ -85,6 +81,7 @@ def Generate_Local_Data(Para_File_Name):
     P6_Generate_Tray            = WS_obj['E8'].value
     P7_Termination              = WS_obj['E9'].value
     P8_Direct_Melt              = WS_obj['E10'].value
+    P9_Generate_Optical_Circuit = WS_obj['E11'].value
 
     # 根据照片修改数据
     global List_Modify_For_Photo
@@ -141,7 +138,7 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit:
         '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
         WS_obj = WB_obj['OCS_List']
         global List_CS_Data
@@ -499,8 +496,8 @@ def Generate_Termination_and_Direct_Melt_Data():
                 for terminal_id_sequence, fiber_id_sequence in zip(List_Terminal_ID_Free_Modify, List_Fiber_ID_Free_Modify):
                     List_Terminal_ID_and_Fiber_ID_Free_Modify.append([terminal_id_sequence[0], terminal_id_sequence[1], fiber_id_sequence[0], fiber_id_sequence[1]])
                 # 注意!注意!注意!
-                box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify
-                box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free_Modify
+                box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify + List_Terminal_ID_and_Fiber_ID_Free_Modify
+                # box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free_Modify 不需要分两步上架
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -566,7 +563,7 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit:
         for ocs_num in List_CS_Data:
             for box_num in List_Box_Data:
                 if ocs_num['A_Box_Name'] == box_num['Box_Name']:
@@ -938,7 +935,7 @@ def Execute_Generate_Tray(Para_List_Box_Data):
     Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
     Response_Body = etree.HTML(Response_Body)
     List_Terminal_IDs = Response_Body.xpath('//terminal//@int_id')
-    print('P5-Terminal_IDs_Count-{}-{}'.format(len(List_Terminal_IDs), Para_List_Box_Data['Box_Name']))
+    print('P6-Terminal_IDs_Count-{}-{}'.format(len(List_Terminal_IDs), Para_List_Box_Data['Box_Name']))
     Para_List_Box_Data['Terminal_IDs'] = List_Terminal_IDs
 
 def Execute_Termination(Para_List_Box_Data):
@@ -968,7 +965,7 @@ def Execute_Termination(Para_List_Box_Data):
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
     Response_Body = etree.HTML(Response_Body)
     List_Termination_State = Response_Body.xpath('//@msg')
-    print('P6-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
+    print('P7-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
 def Execute_Direct_Melt(Para_List_Box_Data):
     if Para_List_Box_Data['1FS_Count'] == 0:
@@ -996,10 +993,10 @@ def Execute_Direct_Melt(Para_List_Box_Data):
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
         Response_Body = etree.HTML(Response_Body)
         List_Direct_Melt_State = Response_Body.xpath('//@msg')
-        print('P6-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Direct_Melt_State[0]))
+        print('P8-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Direct_Melt_State[0]))
 
     elif Para_List_Box_Data['1FS_Count'] != 0:
-        print('P6-{}-是一级分纤箱,不涉及直熔'.format(Para_List_Box_Data['Box_Name']))
+        print('P8-{}-是一级分纤箱,不涉及直熔'.format(Para_List_Box_Data['Box_Name']))
 
 def Execute_Generate_Optical_Circut(Para_List_OC_Data):
     URL_Generate_Optical_Circut = 'http://10.209.199.72:7112/irms/opticOpenAction!saveOptictemp.ilf'
@@ -1018,7 +1015,7 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
     Response_Body = Response_Body.replace('r\"i','ri')
     Response_Body = Response_Body.replace('\"\"','\"')
     Response_Body = json.loads(Response_Body)
-    print('P7-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
+    print('P9-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
 
 def Main_Process(Para_File_Name):
 
@@ -1031,7 +1028,8 @@ def Main_Process(Para_File_Name):
         P5_Generate_ODM or 
         P6_Generate_Tray or
         P7_Termination or
-        P8_Direct_Melt):
+        P8_Direct_Melt or
+        P9_Generate_Optical_Circuit):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
@@ -1043,12 +1041,14 @@ def Main_Process(Para_File_Name):
 
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
-        P4_Cable_Lay):
+        P4_Cable_Lay or
+        P9_Generate_Optical_Circuit):
         print('查询Support_Sys_ID/Cable_Sys_ID')
         Query_Support_Sys_and_Cable_Sys()
 
     if (P2_Generate_Support_Segment or 
-        P3_Generate_Cable_Segment):
+        P3_Generate_Cable_Segment or
+        P9_Generate_Optical_Circuit):
         print('查询Project_Code_ID')
         Query_Project_Code_ID()
 
@@ -1064,7 +1064,8 @@ def Main_Process(Para_File_Name):
 
     if (P4_Cable_Lay or
         P7_Termination or
-        P8_Direct_Melt):
+        P8_Direct_Melt or
+        P9_Generate_Optical_Circuit):
         if (not ('Support_Seg_ID' in List_CS_Data[0])) or (not ('Cable_Seg_ID' in List_CS_Data[0])):
             print('查询Support_Seg_ID/Cable_Seg_ID开始')
             Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
@@ -1078,7 +1079,8 @@ def Main_Process(Para_File_Name):
     if (P5_Generate_ODM or
         P6_Generate_Tray or
         P7_Termination or
-        P8_Direct_Melt):
+        P8_Direct_Melt or
+        P9_Generate_Optical_Circuit):
         Generate_Topology()
         Generate_FS_Data()
 
@@ -1089,7 +1091,8 @@ def Main_Process(Para_File_Name):
 
     if (P6_Generate_Tray or
         P7_Termination or
-        P8_Direct_Melt): # 单独添加托盘需要查询
+        P8_Direct_Melt or
+        P9_Generate_Optical_Circuit): # 单独添加托盘需要查询
         if not ('ODM_ID' in List_Box_Data[0]):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
@@ -1101,7 +1104,8 @@ def Main_Process(Para_File_Name):
         print('P6-结束')
 
     if (P7_Termination or
-        P8_Direct_Melt):
+        P8_Direct_Melt or
+        P9_Generate_Optical_Circuit):
         print('查询Cable_Fiber_ID开始')
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         print('查询Cable_Fiber_ID结束')
@@ -1113,25 +1117,21 @@ def Main_Process(Para_File_Name):
     if P8_Direct_Melt:
         Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
 
-    # if (P7_Termination or 
-    #     P8_Direct_Melt):
-    #     Query_JSESSIONIRMS_and_route()
-    #     print('查询POS_ID开始')
-    #     Swimming_Pool(Query_POS_ID, List_Box_Data)
-    #     print('查询POS_ID结束')
-    #     print('查询POS_Port_ID开始')
-    #     Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-    #     print('查询POS_Port_ID结束')
-    # if P8_Direct_Melt:
-    #     Generate_OC_POS_Data_and_OC_Name()
-    #     Query_Work_Sheet_ID()
+    if P9_Generate_Optical_Circuit:
+        Query_JSESSIONIRMS_and_route()
+        print('查询POS_ID开始')
+        Swimming_Pool(Query_POS_ID, List_Box_Data)
+        print('查询POS_ID结束')
+        print('查询POS_Port_ID开始')
+        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+        print('查询POS_Port_ID结束')
+        Generate_OC_POS_Data_and_OC_Name()
+        Query_Work_Sheet_ID()
 
-
-
-    # if P8_Direct_Melt:
-    #     print('P8-开始')
-    #     Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
-    #     print('P8-结束')
+    if P9_Generate_Optical_Circuit:
+        print('P9-开始')
+        Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
+        print('P9-结束')
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
@@ -1148,11 +1148,11 @@ if __name__ == '__main__':
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
             Generate_Termination_and_Direct_Melt_Data()
-            # Query_JSESSIONIRMS_and_route()
-            # Swimming_Pool(Query_POS_ID, List_Box_Data)
-            # Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-            # Generate_OC_POS_Data_and_OC_Name()
-            # Query_Work_Sheet_ID()
+            Query_JSESSIONIRMS_and_route()
+            Swimming_Pool(Query_POS_ID, List_Box_Data)
+            Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+            Generate_OC_POS_Data_and_OC_Name()
+            Query_Work_Sheet_ID()
 
             # 数据留底
             WB_obj = load_workbook(each_File_Name+'.xlsx')
@@ -1190,31 +1190,25 @@ if __name__ == '__main__':
                     WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
             # List_OC_Data
-            # WS_obj = WB_obj.create_sheet('List_OC_Data')
-            # Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-            # Column_Num = 0
-            # for key in Dic_Column_Name.keys():
-            #     Column_Num += 1
-            #     WS_obj.cell(row=1, column=Column_Num, value=key)
-            # Row_Num = 1
-            # for each_oc_data in List_OC_Data:
-            #     Row_Num += 1
-            #     Column_Num = 0
-            #     dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-            #     for value in dic_Sorted_OC_Data.values():
-            #         Column_Num += 1
-            #         WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+            WS_obj = WB_obj.create_sheet('List_OC_Data')
+            Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+            Column_Num = 0
+            for key in Dic_Column_Name.keys():
+                Column_Num += 1
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_oc_data in List_OC_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_OC_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
             WB_obj.save(each_File_Name+'.xlsx')
             WB_obj.close()
 
-
-    # for each_box_data in List_Box_Data:
-    #     print(each_box_data['POS_IDs'])
-
-
 # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
-
 
 # 0'太原', 
 # 1'阳曲县', 
@@ -1228,7 +1222,6 @@ if __name__ == '__main__':
 # 9'太原阳曲县山西豪德置业有限公司企业宽带1-7#东楼道2号一级分光器-1-006', 
 # 10'二级', 
 # 11'太原阳曲县山西豪德置业有限公司企业宽带1-6#东楼道2-6二级分光器'
-
 
 # 0 阳曲县
 # 1 445835318
