@@ -13,7 +13,8 @@ from collections import Counter
 from Crypto.Cipher import AES
 
 '''
-提交工单(理想情况)
+提交工单:获取工单信息,两个变量workitemId和activeId,发送两个post(其中一个302),可以把工单提到审核阶段,下一步测试杨伟账号的cookie是否可以获取王堃账号的工单列表,查询王堃工单列表的工单信息,发送通过post请求,这里涉及到账号权限问题
+
 光路设计
 工单号写入(含工单建立)
 '''
@@ -840,6 +841,11 @@ def Query_Work_Sheet_ID():
                 if (oc_num + 1) == len(List_OC_Data):
                     break
 
+def Query_OC_Int_ID():
+    ...
+
+def Query_FS_ID():
+    ...
 
 def Execute_Push_Box():
     URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=move'
@@ -1130,9 +1136,10 @@ def Main_Process(Para_File_Name):
 
     if P9_Generate_Optical_Circuit:
         print('P9-开始')
-        Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
+        # Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
         print('P9-结束')
-
+        print(List_OC_Data[0])
+        print(List_OC_Data[1])
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
