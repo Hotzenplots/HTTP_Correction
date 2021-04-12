@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
 import csv
 import pyexiv2
 import math
-'''Beta1 20210306 Initial Release'''
+'''
+    Beta1 20210306 Initial Release
+    Beta2 20210412 更新编码,支持中文文件
+'''
 
 def DMS2DD(para_DMS):
     List_Temp_1 = para_DMS.split(' ')
@@ -26,7 +30,7 @@ def Modify_Coordinate():
         List_GPS.pop(0)
 
     for gps_info_line in List_GPS:
-        Obj_img = pyexiv2.Image(gps_info_line[0])
+        Obj_img = pyexiv2.Image(gps_info_line[0], 'gb2312')
         Exif_Data = Obj_img.read_exif()
         Origin_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
         Origin_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
