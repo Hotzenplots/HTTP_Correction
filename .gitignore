@@ -129,3 +129,4 @@ dmypy.json
 *.jpg
 *.rar
 test.py
+*.zip
