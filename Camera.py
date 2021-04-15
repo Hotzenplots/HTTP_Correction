@@ -76,7 +76,7 @@ def DMS2DD(para_DMS):
     Dig_DD = List_Temp_2[0] + List_Temp_2[1] / 60 + List_Temp_2[2] / 3600
     return Dig_DD
 
-def Up_Load_Photo(Para_Box_Info):
+def Upload_Photo(Para_Box_Info):
 
     if (Para_Box_Info['ZH_LABEL'].find('GJ') != -1) or (Para_Box_Info['ZH_LABEL'].find('gj') != -1):
         resClassName = 'OPTI_TRAN_BOX'
@@ -109,6 +109,26 @@ def Find_Photos():
                 List_Box_Photos.append(photo_name)
         box_info['Box_Photos'] = List_Box_Photos
 
+def Clear_Photo(Para_Box_Info):
+
+    if (Para_Box_Info['ZH_LABEL'].find('GJ') != -1) or (Para_Box_Info['ZH_LABEL'].find('gj') != -1):
+        resClassName = 'OPTI_TRAN_BOX'
+    else:
+        resClassName = 'OPTI_SFB'
+
+    URL_Query_Photo = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!preUploadPhoto.action?objId='+Para_Box_Info['INT_ID']+'&resClassName='+resClassName
+    Response_Body = requests.get(URL_Query_Photo, cookies={'tsid': tsid_v, 'route': route_v})
+    Response_Body = etree.HTML(Response_Body.text)
+    List_Photo =  Response_Body.xpath("//img/@src")
+    List_Photo.pop(0)
+    if len(List_Photo) == 0:
+        print(Para_Box_Info['ZH_LABEL']+'无照片')
+    elif len(List_Photo) != 0:
+        for photo_address in List_Photo:
+            URL_Delete_Photo = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!detelePhoto.action?photoId='+photo_address[len(photo_address) - 6:len(photo_address)]+'&objId='+Para_Box_Info['INT_ID']+'&resClassName='+resClassName
+            Response_Body = requests.post(URL_Delete_Photo, cookies={'tsid': tsid_v, 'route': route_v})
+        print(Para_Box_Info['ZH_LABEL']+'照片已清空')
+
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
         Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
@@ -119,7 +139,8 @@ if __name__ == '__main__':
     Find_Photos()
     Modify_Phote_Coordinate()
     Query_tsid_and_route()
-    # Swimming_Pool(Up_Load_Photo, List_Box_Info)
+    # Swimming_Pool(Clear_Photo, List_Box_Info)
+    # Swimming_Pool(Upload_Photo, List_Box_Info)
     for box_info in List_Box_Info:
-        Up_Load_Photo(box_info)
-
+        Clear_Photo(box_info)
+        Upload_Photo(box_info)
