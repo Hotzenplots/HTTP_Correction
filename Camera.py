@@ -126,7 +126,7 @@ def Clear_Photo(Para_Box_Info):
     elif len(List_Photo) != 0:
         for photo_address in List_Photo:
             URL_Delete_Photo = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!detelePhoto.action?photoId='+photo_address[len(photo_address) - 6:len(photo_address)]+'&objId='+Para_Box_Info['INT_ID']+'&resClassName='+resClassName
-            Response_Body = requests.post(URL_Delete_Photo, cookies={'tsid': tsid_v, 'route': route_v})
+            Response_Body = requests.get(URL_Delete_Photo, cookies={'tsid': tsid_v, 'route': route_v})
         print(Para_Box_Info['ZH_LABEL']+'照片已清空')
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
