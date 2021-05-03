@@ -14,12 +14,16 @@ from Crypto.Cipher import AES
 
 '''
 提交工单:获取工单信息,两个变量workitemId和activeId,发送两个post(其中一个302),可以把工单提到审核阶段,下一步测试杨伟账号的cookie是否可以获取王堃账号的工单列表,查询王堃工单列表的工单信息,发送通过post请求,这里涉及到账号权限问题
-
-光路设计
-工单号写入(含工单建立)
+整理模板的info表和Template表,调整info表的结构,调整template表的顺序,考虑合并表,template的信息在下
+写入工单号,需要三个单独的全查询(箱子,光缆,引上),三个全更新,新建工单需要抓包,获取工单编号需要抓包
+考虑去掉9204的表,集成到代码中
+光路设计,占用通路是一个难点,默认可以光路设计跳纤
+7013表考虑是否不精简
+外线是否可以构建自定义查询
+优化from语句
 '''
 
-File_Name = ['峪峰花园小']
+File_Name = ['西桥']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
