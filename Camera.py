@@ -6,6 +6,7 @@ import requests
 import os
 import math
 import pyexiv2
+import random
 
 def Query_tsid_and_route():
     Query_Session = requests.session()
@@ -39,6 +40,7 @@ def Query_Box_Info(Para_Box_Name):
 
 def Modify_Phote_Coordinate():
     for box_info in List_Box_Info:
+        random_num = random.randint(1,9)/100000
         for photo_name in box_info['Box_Photos']:
             Obj_img = pyexiv2.Image(photo_name, 'gb2312')
 
@@ -48,7 +50,7 @@ def Modify_Phote_Coordinate():
             Origin_Longitude_DD = DMS2DD(Origin_Longitude)
             Origin_Latitude_DD = DMS2DD(Origin_Latitude)
 
-            Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE'])), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']))}
+            Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']) + random_num)}
             Obj_img.modify_exif(Dic_New_Coordinate)
             Exif_Data = Obj_img.read_exif()
             New_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
@@ -84,28 +86,38 @@ def Upload_Photo(Para_Box_Info):
         resClassName = 'OPTI_SFB'
 
     for photo_name in Para_Box_Info['Box_Photos']:
-        URL_Upload = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!uploadPhoto.action?objId='+Para_Box_Info['INT_ID']+'&resClassName='+resClassName+'&extensionName='+photo_name[(len(photo_name)-3):len(photo_name)]
-        files = {'filename':(photo_name, open(photo_name, 'rb'),'image/pjpeg')}
+        URL_Upload = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!sxUploadPhoto.action?objId=' + Para_Box_Info['INT_ID']
+        files = {'file':(photo_name, open(photo_name, 'rb'),'image/pjpeg'), 'resClassName': (None, resClassName, None), ('file' + photo_name[-5:-4] + '_name'): (None, 'C:\\fakepath\\' + photo_name, None)}
         Response_Body = requests.post(URL_Upload, files=files, cookies={'tsid': tsid_v, 'route': route_v})
         print(photo_name, Response_Body.status_code)
 
 def Processing_Local_File():
-    global List_Box_Info, List_Box_Name,List_Folder_File_List
-    List_Box_Name = List_Box_Info = List_Folder_File_List =[]
-    with open('Camera.csv') as file_csv:
-        reader_obj = csv.reader(file_csv)
-        List_Box_Name = list(reader_obj)
-        List_Box_Name.pop(0)
-    List_Box_Name = [str(i) for j in List_Box_Name for i in j]
+    global List_Box_Info,List_Folder_File_List,List_Box_Name
+    List_Box_Name = []
+    List_Box_Info = []
+    List_Folder_File_List =[]
     List_Folder_File_List = os.listdir()
     List_Folder_File_List.remove('Camera.py')
-    List_Folder_File_List.remove('Camera.csv')
+    for file_name in List_Folder_File_List:
+        List_Box_Name.append(file_name[0:-6])
+    Set_Box_Name = set(List_Box_Name)
+    List_Box_Name = list(Set_Box_Name)
 
 def Find_Photos():
     for box_info in List_Box_Info:
         List_Box_Photos = []
         for photo_name in List_Folder_File_List:
-            if (photo_name.find(box_info['ZH_LABEL']) != -1):
+            if (photo_name.find(box_info['ZH_LABEL']+'-A') != -1):
+                List_Box_Photos.append(photo_name)
+            if (photo_name.find(box_info['ZH_LABEL']+'-B') != -1):
+                List_Box_Photos.append(photo_name)
+            if (photo_name.find(box_info['ZH_LABEL']+'-C') != -1):
+                List_Box_Photos.append(photo_name)
+            if (photo_name.find(box_info['ZH_LABEL']+'-D') != -1):
+                List_Box_Photos.append(photo_name)
+            if (photo_name.find(box_info['ZH_LABEL']+'-E') != -1):
+                List_Box_Photos.append(photo_name)
+            if (photo_name.find(box_info['ZH_LABEL']+'-F') != -1):
                 List_Box_Photos.append(photo_name)
         box_info['Box_Photos'] = List_Box_Photos
 
@@ -139,8 +151,6 @@ if __name__ == '__main__':
     Find_Photos()
     Modify_Phote_Coordinate()
     Query_tsid_and_route()
-    # Swimming_Pool(Clear_Photo, List_Box_Info)
-    # Swimming_Pool(Upload_Photo, List_Box_Info)
     for box_info in List_Box_Info:
         Clear_Photo(box_info)
         Upload_Photo(box_info)

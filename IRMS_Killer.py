@@ -51,6 +51,7 @@ def Generate_Local_Data(Para_File_Name):
 
     '''读取并整理Sheet_Template,生成List_Template'''
     WB_obj = load_workbook(Para_File_Name+'.xlsx')
+    
     WS_obj = WB_obj['Template']
     List_Template = []
     cell_range = WS_obj['A2': 'S11']
@@ -803,7 +804,7 @@ def Query_POS_Port_IDs(Para_List_Box_Data):
         List_POS_IDs.pop(0)
         Para_List_Box_Data['POS_IDs'].append(List_POS_IDs)
 
-def Query_Work_Sheet_ID():
+def Query_Optical_Route_Sheet_ID():
     Work_Sheet_Count = math.ceil(len(List_OC_Data) / 40)
     for work_sheet_num in range(Work_Sheet_Count):
         Work_Sheet_Name = '关于' + List_OC_Data[0]['Business_Name'] + '二级光路申请yry' + '0' + str(work_sheet_num)
@@ -844,6 +845,24 @@ def Query_Work_Sheet_ID():
                 List_OC_Data[oc_num]['Pro_ID'] = Response_Body['root'][0]['FLOW_ID']
                 if (oc_num + 1) == len(List_OC_Data):
                     break
+
+def Query_Integrate_Sheet_ID():
+
+    Query_JSESSIONIRMS_and_route()
+
+    List_Integrate_Sheet_Name = [List_7013[1][5] + '-汇聚', List_7013[1][5] + '-区内']
+    for sheet_name in List_Integrate_Sheet_Name:
+        URL_Query_Integrate_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
+        Form_Info_Encoded = 'processinstname=' + parse.quote_plus(sheet_name)
+        Request_Lenth = str(len(Form_Info_Encoded))
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+        Response_Body = requests.post(URL_Query_Integrate_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+        Response_Body = Response_Body.text
+        Response_Body = json.loads(Response_Body)
+        if Response_Body['totalCount'] == 0:
+            print(sheet_name,"无工单")
+        elif Response_Body['totalCount'] != 0:
+            print(sheet_name,"有工单")
 
 def Query_OC_Int_ID():
     ...
@@ -1030,6 +1049,7 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
 def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
+    Query_Integrate_Sheet_ID()
 
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
@@ -1136,7 +1156,7 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
         print('查询POS_Port_ID结束')
         Generate_OC_POS_Data_and_OC_Name()
-        Query_Work_Sheet_ID()
+        Query_Optical_Route_Sheet_ID()
 
     if P9_Generate_Optical_Circuit:
         print('P9-开始')
@@ -1163,7 +1183,7 @@ if __name__ == '__main__':
             Swimming_Pool(Query_POS_ID, List_Box_Data)
             Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
             Generate_OC_POS_Data_and_OC_Name()
-            Query_Work_Sheet_ID()
+            Query_Optical_Route_Sheet_ID()
 
             # 数据留底
             WB_obj = load_workbook(each_File_Name+'.xlsx')
