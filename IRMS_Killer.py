@@ -16,7 +16,6 @@ from Crypto.Cipher import AES
 提交工单:获取工单信息,两个变量workitemId和activeId,发送两个post(其中一个302),可以把工单提到审核阶段,下一步测试杨伟账号的cookie是否可以获取王堃账号的工单列表,查询王堃工单列表的工单信息,发送通过post请求,这里涉及到账号权限问题
 整理模板的info表和Template表,调整info表的结构,调整template表的顺序,考虑合并表,template的信息在下
 写入工单号,需要三个单独的全查询(箱子,光缆,引上),三个全更新,新建工单需要抓包,获取工单编号需要抓包
-考虑去掉9204的表,集成到代码中
 光路设计,占用通路是一个难点,默认可以光路设计跳纤
 7013表考虑是否不精简
 外线是否可以构建自定义查询
@@ -51,10 +50,10 @@ def Generate_Local_Data(Para_File_Name):
 
     '''读取并整理Sheet_Template,生成List_Template'''
     WB_obj = load_workbook(Para_File_Name+'.xlsx')
-    
-    WS_obj = WB_obj['Template']
+
+    WS_obj = WB_obj['Info']
     List_Template = []
-    cell_range = WS_obj['A2': 'S11']
+    cell_range = WS_obj['A21': 'S31']
     for row_data in cell_range:
         List_Temp_1 = []
         for cell in row_data:
@@ -69,13 +68,12 @@ def Generate_Local_Data(Para_File_Name):
     Login_Password = List_Template_Selected[18]
 
     '''读取并整理Sheet_Info,生成List_Box_Type和其他参数'''
-    WS_obj = WB_obj['Info']
-    Longitude_Start     = WS_obj['B1'].value
-    Latitude_Start      = WS_obj['B2'].value
-    Horizontal_Density  = WS_obj['B3'].value
-    Vertical_Density    = WS_obj['B4'].value
-    Anchor_Point_Buttom = WS_obj['B5'].value
-    Anchor_Point_Right  = WS_obj['B6'].value
+    Longitude_Start     = WS_obj['B2'].value
+    Latitude_Start      = WS_obj['B3'].value
+    Horizontal_Density  = WS_obj['B4'].value
+    Vertical_Density    = WS_obj['B5'].value
+    Anchor_Point_Buttom = WS_obj['B6'].value
+    Anchor_Point_Right  = WS_obj['B7'].value
 
     global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit
     P0_Data_Check               = WS_obj['E2'].value
@@ -93,17 +91,12 @@ def Generate_Local_Data(Para_File_Name):
     global List_Modify_For_Photo
     List_Modify_For_Photo = []
     box_num = 0
-    while WS_obj[('D' + str(20 + box_num))].value:
-        List_Modify_For_Photo.append([WS_obj[('D' + str(20 + box_num))].value, WS_obj[('E' + str(20 + box_num))].value, WS_obj[('F' + str(20 + box_num))].value])
+    while WS_obj[('H' + str(2 + box_num))].value:
+        List_Modify_For_Photo.append([WS_obj[('H' + str(2 + box_num))].value, WS_obj[('I' + str(2 + box_num))].value, WS_obj[('J' + str(2 + box_num))].value])
         box_num += 1
 
-    List_Box_Type = []
-    cell_range = WS_obj['H2': 'J3']
-    for row_data in cell_range:
-        List_Temp_1 = []
-        for cell in row_data:
-            List_Temp_1.append(cell.value)
-        List_Box_Type.append(List_Temp_1)
+    # 箱体类型ID
+    List_Box_Type = [['guangfenxianxiang', 9204, 9115], ['guangjiaojiexiang', 9203, 9115]]
 
     '''读取并整理Sheet_Box_Topology,生成List_Box_Data'''
     WS_obj = WB_obj['BOX_Topology']
@@ -1049,8 +1042,7 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
 def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
-    Query_Integrate_Sheet_ID()
-
+    # Query_Integrate_Sheet_ID()
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
@@ -1160,14 +1152,14 @@ def Main_Process(Para_File_Name):
 
     if P9_Generate_Optical_Circuit:
         print('P9-开始')
-        # Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
+        Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
         print('P9-结束')
-        print(List_OC_Data[0])
-        print(List_OC_Data[1])
+
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
 
+        # 数据测试
         if P0_Data_Check:
             Generate_Local_Data(each_File_Name)
             Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
@@ -1185,7 +1177,7 @@ if __name__ == '__main__':
             Generate_OC_POS_Data_and_OC_Name()
             Query_Optical_Route_Sheet_ID()
 
-            # 数据留底
+            
             WB_obj = load_workbook(each_File_Name+'.xlsx')
 
             # List_Box_Data
