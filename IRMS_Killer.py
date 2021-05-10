@@ -22,7 +22,7 @@ from Crypto.Cipher import AES
 优化from语句
 '''
 
-File_Name = ['西桥']
+File_Name = ['观门前','化学试剂部','南城企业局宿舍','教委宿舍']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -170,6 +170,7 @@ def Generate_Local_Data(Para_File_Name):
                     dic_num_in_osc['Z_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
                     dic_num_in_osc['Z_Longitude'] = dic_num_in_box['Longitude']
                     dic_num_in_osc['Z_Latitude'] = dic_num_in_box['Latitude']
+
             dic_num_in_osc['Length'] = round(math.sqrt(((dic_num_in_osc['A_Longitude'] - dic_num_in_osc['Z_Longitude']) * Horizontal_Metre) ** 2 + ((dic_num_in_osc['A_Latitude'] - dic_num_in_osc['Z_Latitude'])* Vertical_Metre) ** 2))
             dic_num_in_osc['Business_Level'] = 8
             dic_num_in_osc['Life_Cycle'] = 8
@@ -444,6 +445,7 @@ def Generate_Termination_and_Direct_Melt_Data():
             # 注意!注意!注意!
             box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied
             box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free
+            box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied + List_Terminal_ID_and_Fiber_ID_Free
 
            # 根据照片修改数据
             if len(List_Modify_For_Photo) != 0:
@@ -495,8 +497,9 @@ def Generate_Termination_and_Direct_Melt_Data():
                 for terminal_id_sequence, fiber_id_sequence in zip(List_Terminal_ID_Free_Modify, List_Fiber_ID_Free_Modify):
                     List_Terminal_ID_and_Fiber_ID_Free_Modify.append([terminal_id_sequence[0], terminal_id_sequence[1], fiber_id_sequence[0], fiber_id_sequence[1]])
                 # 注意!注意!注意!
+                box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify
+                box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free_Modify
                 box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify + List_Terminal_ID_and_Fiber_ID_Free_Modify
-                # box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free_Modify 不需要分两步上架
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -798,9 +801,10 @@ def Query_POS_Port_IDs(Para_List_Box_Data):
         Para_List_Box_Data['POS_IDs'].append(List_POS_IDs)
 
 def Query_Optical_Route_Sheet_ID():
+    Task_Name_ID_List = List_7013[1][5].split('-')
     Work_Sheet_Count = math.ceil(len(List_OC_Data) / 40)
     for work_sheet_num in range(Work_Sheet_Count):
-        Work_Sheet_Name = '关于' + List_OC_Data[0]['Business_Name'] + '二级光路申请yry' + '0' + str(work_sheet_num)
+        Work_Sheet_Name = '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '二级光路申请' + '0' + str(work_sheet_num)
         Work_Sheet_Times = []
         Work_Sheet_Times.append(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         Work_Sheet_Times.append((datetime.datetime.now() + datetime.timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S'))
@@ -841,9 +845,10 @@ def Query_Optical_Route_Sheet_ID():
 
 def Query_Integrate_Sheet_ID():
 
+    Task_Name_ID_List = List_7013[1][5].split('-')
     Query_JSESSIONIRMS_and_route()
 
-    List_Integrate_Sheet_Name = [List_7013[1][5] + '-汇聚', List_7013[1][5] + '-区内']
+    List_Integrate_Sheet_Name = ['关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请-汇聚', '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请-区内']
     for sheet_name in List_Integrate_Sheet_Name:
         URL_Query_Integrate_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
         Form_Info_Encoded = 'processinstname=' + parse.quote_plus(sheet_name)
@@ -853,10 +858,22 @@ def Query_Integrate_Sheet_ID():
         Response_Body = Response_Body.text
         Response_Body = json.loads(Response_Body)
         if Response_Body['totalCount'] == 0:
+
             print(sheet_name,"无工单")
+
+            URL_Create_Integrate_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'
+            Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+            Response_Body = bytes(Response_Body.text, encoding="utf-8")
+            Response_Body = etree.HTML(Response_Body)
+            List_Integrate_Sheet_Info = Response_Body.xpath('//input/@value')
+            URL_Create_Integrate_Sheet_Step_2 = 'http://10.209.199.72:7112/irms/pipelineresInAction!submit.ilf'
+            # Form_Info_Encoded = 'ownerId=' + List_Integrate_Sheet_Info[1] + '&deptId=' + List_Integrate_Sheet_Info[2] + '&flowId=' + List_Integrate_Sheet_Info[3] + 
+            print(List_Integrate_Sheet_Info)
+
         elif Response_Body['totalCount'] != 0:
             print(sheet_name,"有工单")
-
+            print(Response_Body['root'][0]['PROCESSINSTID'])
+                                                                                      
 def Query_OC_Int_ID():
     ...
 
@@ -1043,6 +1060,7 @@ def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
     # Query_Integrate_Sheet_ID()
+
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
@@ -1105,6 +1123,7 @@ def Main_Process(Para_File_Name):
         P9_Generate_Optical_Circuit):
         Generate_Topology()
         Generate_FS_Data()
+        
 
     if P5_Generate_ODM:
         print('P5-开始')
