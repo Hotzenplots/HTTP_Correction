@@ -22,7 +22,7 @@ from Crypto.Cipher import AES
 优化from语句
 '''
 
-File_Name = ['观门前','化学试剂部','南城企业局宿舍','教委宿舍']
+File_Name = ['平舆小黑']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -75,7 +75,7 @@ def Generate_Local_Data(Para_File_Name):
     Anchor_Point_Buttom = WS_obj['B6'].value
     Anchor_Point_Right  = WS_obj['B7'].value
 
-    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit
+    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit, P10_Transmission_Design
     P0_Data_Check               = WS_obj['E2'].value
     P1_Push_Box                 = WS_obj['E3'].value
     P2_Generate_Support_Segment = WS_obj['E4'].value
@@ -86,6 +86,7 @@ def Generate_Local_Data(Para_File_Name):
     P7_Termination              = WS_obj['E9'].value
     P8_Direct_Melt              = WS_obj['E10'].value
     P9_Generate_Optical_Circuit = WS_obj['E11'].value
+    P10_Transmission_Design     = WS_obj['E12'].value
 
     # 根据照片修改数据
     global List_Modify_For_Photo
@@ -137,7 +138,7 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design:
         '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
         WS_obj = WB_obj['OCS_List']
         global List_CS_Data
@@ -192,7 +193,7 @@ def Generate_Local_Data(Para_File_Name):
             if each_7013_line[10] == '二级':
                 List_OC_Data.append(dict({
                     'Z_POS_Name': each_7013_line[11],
-                    'Z_Box_Name':  each_7013_line[3],
+                    'Z_Box_Name': each_7013_line[3],
                     'A_POS_Name': each_7013_line[8],
                     'City_ID': List_Template_Selected[16],
                     'County_ID': List_Template_Selected[1],
@@ -565,7 +566,7 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design:
         for ocs_num in List_CS_Data:
             for box_num in List_Box_Data:
                 if ocs_num['A_Box_Name'] == box_num['Box_Name']:
@@ -861,21 +862,39 @@ def Query_Integrate_Sheet_ID():
 
             print(sheet_name,"无工单")
 
-            URL_Create_Integrate_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'
-            Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
-            Response_Body = bytes(Response_Body.text, encoding="utf-8")
-            Response_Body = etree.HTML(Response_Body)
-            List_Integrate_Sheet_Info = Response_Body.xpath('//input/@value')
-            URL_Create_Integrate_Sheet_Step_2 = 'http://10.209.199.72:7112/irms/pipelineresInAction!submit.ilf'
+            # URL_Create_Integrate_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'
+            # Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+            # Response_Body = bytes(Response_Body.text, encoding="utf-8")
+            # Response_Body = etree.HTML(Response_Body)
+            # List_Integrate_Sheet_Info = Response_Body.xpath('//input/@value')
+            # URL_Create_Integrate_Sheet_Step_2 = 'http://10.209.199.72:7112/irms/pipelineresInAction!submit.ilf'
             # Form_Info_Encoded = 'ownerId=' + List_Integrate_Sheet_Info[1] + '&deptId=' + List_Integrate_Sheet_Info[2] + '&flowId=' + List_Integrate_Sheet_Info[3] + 
-            print(List_Integrate_Sheet_Info)
+            # print(List_Integrate_Sheet_Info)
 
         elif Response_Body['totalCount'] != 0:
             print(sheet_name,"有工单")
             print(Response_Body['root'][0]['PROCESSINSTID'])
-                                                                                      
+
 def Query_OC_Int_ID():
-    ...
+    List_Pro_ID = []
+    for oc_data in List_OC_Data:
+        List_Pro_ID.append(oc_data['Pro_ID'])
+    Set_Pro_ID = set(List_Pro_ID)
+    List_Pro_ID = list(Set_Pro_ID)
+
+    for pro_id in List_Pro_ID:
+        URL_Query_OC_Int_ID = 'http://10.209.199.72:7112/irms/opticOpenApplyAction!queryOptictemp.ilf?flowId='
+        URL_Query_OC_Int_ID = URL_Query_OC_Int_ID + str(pro_id)
+        XML_Info_Encoded = 'start=' + '0' + '&limit=' + '45'
+        Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
+        Response_Body = requests.post(URL_Query_OC_Int_ID, headers=Request_Header, data=XML_Info_Encoded,  cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+        Response_Body = Response_Body.text
+        Response_Body = json.loads(Response_Body)
+        for oc_info_in_response in Response_Body['root']:
+            for oc_data in List_OC_Data:
+                if oc_data['OC_Name'] == oc_info_in_response['opticname']:
+                    oc_data['Int_ID'] = oc_info_in_response['intId']
+                    break
 
 def Query_FS_ID():
     ...
@@ -1069,7 +1088,8 @@ def Main_Process(Para_File_Name):
         P6_Generate_Tray or
         P7_Termination or
         P8_Direct_Melt or
-        P9_Generate_Optical_Circuit):
+        P9_Generate_Optical_Circuit or
+        P10_Transmission_Design):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
@@ -1081,14 +1101,14 @@ def Main_Process(Para_File_Name):
 
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
-        P4_Cable_Lay or
-        P9_Generate_Optical_Circuit):
+        P4_Cable_Lay):
         print('查询Support_Sys_ID/Cable_Sys_ID')
         Query_Support_Sys_and_Cable_Sys()
 
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or
-        P9_Generate_Optical_Circuit):
+        P9_Generate_Optical_Circuit or
+        P10_Transmission_Design):
         print('查询Project_Code_ID')
         Query_Project_Code_ID()
 
@@ -1104,8 +1124,7 @@ def Main_Process(Para_File_Name):
 
     if (P4_Cable_Lay or
         P7_Termination or
-        P8_Direct_Melt or
-        P9_Generate_Optical_Circuit):
+        P8_Direct_Melt):
         if (not ('Support_Seg_ID' in List_CS_Data[0])) or (not ('Cable_Seg_ID' in List_CS_Data[0])):
             print('查询Support_Seg_ID/Cable_Seg_ID开始')
             Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
@@ -1119,8 +1138,7 @@ def Main_Process(Para_File_Name):
     if (P5_Generate_ODM or
         P6_Generate_Tray or
         P7_Termination or
-        P8_Direct_Melt or
-        P9_Generate_Optical_Circuit):
+        P8_Direct_Melt):
         Generate_Topology()
         Generate_FS_Data()
         
@@ -1132,8 +1150,7 @@ def Main_Process(Para_File_Name):
 
     if (P6_Generate_Tray or
         P7_Termination or
-        P8_Direct_Melt or
-        P9_Generate_Optical_Circuit): # 单独添加托盘需要查询
+        P8_Direct_Melt): # 单独添加托盘需要查询
         if not ('ODM_ID' in List_Box_Data[0]):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
@@ -1145,8 +1162,7 @@ def Main_Process(Para_File_Name):
         print('P6-结束')
 
     if (P7_Termination or
-        P8_Direct_Melt or
-        P9_Generate_Optical_Circuit):
+        P8_Direct_Melt):
         print('查询Cable_Fiber_ID开始')
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         print('查询Cable_Fiber_ID结束')
@@ -1158,7 +1174,8 @@ def Main_Process(Para_File_Name):
     if P8_Direct_Melt:
         Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
 
-    if P9_Generate_Optical_Circuit:
+    if (P9_Generate_Optical_Circuit or
+        P10_Transmission_Design):
         Query_JSESSIONIRMS_and_route()
         print('查询POS_ID开始')
         Swimming_Pool(Query_POS_ID, List_Box_Data)
@@ -1173,6 +1190,11 @@ def Main_Process(Para_File_Name):
         print('P9-开始')
         Swimming_Pool(Execute_Generate_Optical_Circut, List_OC_Data)
         print('P9-结束')
+
+    if P10_Transmission_Design:
+        print('查询OC_Int_ID开始')
+        Query_OC_Int_ID()
+        print('查询OC_Int_ID结束')
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
@@ -1195,8 +1217,8 @@ if __name__ == '__main__':
             Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
             Generate_OC_POS_Data_and_OC_Name()
             Query_Optical_Route_Sheet_ID()
+            Query_OC_Int_ID()
 
-            
             WB_obj = load_workbook(each_File_Name+'.xlsx')
 
             # List_Box_Data
