@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from openpyxl import load_workbook
 from collections import Counter
 from Crypto.Cipher import AES
+import re
 
 '''
 提交工单:获取工单信息,两个变量workitemId和activeId,发送两个post(其中一个302),可以把工单提到审核阶段,下一步测试杨伟账号的cookie是否可以获取王堃账号的工单列表,查询王堃工单列表的工单信息,发送通过post请求,这里涉及到账号权限问题
@@ -20,6 +21,7 @@ from Crypto.Cipher import AES
 7013表考虑是否不精简
 外线是否可以构建自定义查询
 优化from语句
+建立工单可能有问题
 '''
 
 File_Name = ['平舆小黑']
@@ -53,7 +55,7 @@ def Generate_Local_Data(Para_File_Name):
 
     WS_obj = WB_obj['Info']
     List_Template = []
-    cell_range = WS_obj['A21': 'S31']
+    cell_range = WS_obj['A21': 'U31']
     for row_data in cell_range:
         List_Temp_1 = []
         for cell in row_data:
@@ -63,9 +65,11 @@ def Generate_Local_Data(Para_File_Name):
         if List_7013[1][1] == list_num[0]:
             List_Template_Selected = copy.deepcopy(list_num)
 
-    global Login_Username,Login_Password
-    Login_Username = List_Template_Selected[17]
-    Login_Password = List_Template_Selected[18]
+    global Username_Create,Password_Create,Username_Run,Password_Run
+    Username_Create = List_Template_Selected[17]
+    Password_Create = List_Template_Selected[18]
+    Username_Run = List_Template_Selected[19]
+    Password_Run = List_Template_Selected[20]
 
     '''读取并整理Sheet_Info,生成List_Box_Type和其他参数'''
     Longitude_Start     = WS_obj['B2'].value
@@ -195,6 +199,7 @@ def Generate_Local_Data(Para_File_Name):
                     'Z_POS_Name': each_7013_line[11],
                     'Z_Box_Name': each_7013_line[3],
                     'A_POS_Name': each_7013_line[8],
+                    'A_Port_Name': each_7013_line[9],
                     'City_ID': List_Template_Selected[16],
                     'County_ID': List_Template_Selected[1],
                     'Business_Name': Task_Name_ID_List[1],
@@ -507,11 +512,11 @@ def Generate_OC_POS_Data_and_OC_Name():
     for each_oc_data in List_OC_Data:
         for each_box_data in List_Box_Data:
             if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
-                for keykey, valuevalue in each_box_data['POS'].items():
+                for keykey, valuevalue in each_box_data['POS_IDs'].items():
                     if each_oc_data['A_POS_Name'] == keykey:
                         each_oc_data['A_POS_ID'] = valuevalue
             if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
-                for keykey, valuevalue in each_box_data['POS'].items():
+                for keykey, valuevalue in each_box_data['POS_IDs'].items():
                     if each_oc_data['Z_POS_Name'] == keykey:
                         each_oc_data['Z_POS_ID'] = valuevalue
 
@@ -661,7 +666,7 @@ def Query_Support_Sys_and_Cable_Sys():
             ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
         print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
-def Query_JSESSIONIRMS_and_route():
+def Query_Run_Certification():
 
     def add_to_16(Para_Password):
         while len(Para_Password) % 16 != 0:
@@ -672,28 +677,62 @@ def Query_JSESSIONIRMS_and_route():
     Encrypt_key_byte = Encrypt_key.encode()
     Encrypt_iv ='sxportaljiamiwyl'
     Encrypt_iv_byte = Encrypt_iv.encode()
-    print(Login_Username)
-    print(Login_Password)
-    Login_Password_byte = Login_Password.encode()
-    Login_Password_byte = add_to_16(Login_Password)
+    print(Username_Run)
+    print(Password_Run)
+    Login_Password_byte = Password_Run.encode()
+    Login_Password_byte = add_to_16(Password_Run)
     Cipher = AES.new(Encrypt_key_byte, AES.MODE_CBC, Encrypt_iv_byte)
     Encrypted_byte = Cipher.encrypt(Login_Password_byte)
     Encrypted_byte = base64.b64encode(Encrypted_byte)
     Encrypt_Password = Encrypted_byte.decode()
 
     session = requests.session()
-    Response_Body = session.post('http://portal.sx.cmcc/pkmslogin.form?uid=tyyangwei',data= {'login-form-type':'pwd','username':Login_Username,'password':Encrypt_Password})
+    Response_Body = session.post('http://portal.sx.cmcc/pkmslogin.form?uid=' + Username_Run,data= {'login-form-type':'pwd','username':Username_Run,'password':Encrypt_Password})
     Response_Body = session.post('http://portal.sx.cmcc/sxmcc_wcm/middelwebpage/encryptportallogin/encryptlogin.jsp?appurl=http://10.209.199.72:7112/irms/sso.action')
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
     Response_Body = etree.HTML(Response_Body)
     List_userdt_ipaddress = Response_Body.xpath('//@value')
     Response_Body = requests.post('http://10.209.199.72:7112/irms/sso.action',data={'userdt': List_userdt_ipaddress[0], 'ipAddress': List_userdt_ipaddress[1]})
     cookies = requests.utils.dict_from_cookiejar(Response_Body.cookies)
-    global Jsessionirms_v, route_v
-    Jsessionirms_v = cookies['JSESSIONIRMS']
-    route_v = cookies['route']
-    print('JSESSIONIRMS: ' + Jsessionirms_v)
-    print('route: ' + route_v)
+    global Jsessionirms_v_Run, route_v_Run
+    Jsessionirms_v_Run = cookies['JSESSIONIRMS']
+    route_v_Run = cookies['route']
+    print('JSESSIONIRMS_Run: ' + Jsessionirms_v_Run)
+    print('route_Run: ' + route_v_Run)
+
+def Query_Create_Certification():
+
+    def add_to_16(Para_Password):
+        while len(Para_Password) % 16 != 0:
+            Para_Password += '\x00'
+        return str.encode(Para_Password)
+
+    Encrypt_key='sxportaljiamikey'
+    Encrypt_key_byte = Encrypt_key.encode()
+    Encrypt_iv ='sxportaljiamiwyl'
+    Encrypt_iv_byte = Encrypt_iv.encode()
+    print(Username_Create)
+    print(Password_Create)
+    Login_Password_byte = Password_Create.encode()
+    Login_Password_byte = add_to_16(Password_Create)
+    Cipher = AES.new(Encrypt_key_byte, AES.MODE_CBC, Encrypt_iv_byte)
+    Encrypted_byte = Cipher.encrypt(Login_Password_byte)
+    Encrypted_byte = base64.b64encode(Encrypted_byte)
+    Encrypt_Password = Encrypted_byte.decode()
+
+    session = requests.session()
+    Response_Body = session.post('http://portal.sx.cmcc/pkmslogin.form?uid=' + Username_Create,data= {'login-form-type':'pwd','username':Username_Create,'password':Encrypt_Password})
+    Response_Body = session.post('http://portal.sx.cmcc/sxmcc_wcm/middelwebpage/encryptportallogin/encryptlogin.jsp?appurl=http://10.209.199.72:7112/irms/sso.action')
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_userdt_ipaddress = Response_Body.xpath('//@value')
+    Response_Body = requests.post('http://10.209.199.72:7112/irms/sso.action',data={'userdt': List_userdt_ipaddress[0], 'ipAddress': List_userdt_ipaddress[1]})
+    cookies = requests.utils.dict_from_cookiejar(Response_Body.cookies)
+    global Jsessionirms_v_Create, route_v_Create
+    Jsessionirms_v_Create = cookies['JSESSIONIRMS']
+    route_v_Create = cookies['route']
+    print('JSESSIONIRMS_Create: ' + Jsessionirms_v_Create)
+    print('route_Create: ' + route_v_Create)
 
 def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     List_CS_Support_Seg_Name_ID_Cable_Name_ID = {}
@@ -765,7 +804,7 @@ def Query_POS_ID(Para_List_Box_Data):
     Form_Info_Encoded = 'equType=POS&countyId=' + str(Para_List_Box_Data['County_ID']) + '&siteId=' + str(Para_List_Box_Data['ResPoint_ID']) + '&sitetype=' + str(Para_List_Box_Data['ResPoint_Type_ID']) + '&sitename=' + parse.quote_plus(Para_List_Box_Data['ResPoint_Name']) + '&cityId=' + str(Para_List_Box_Data['City_ID'])
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+    Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
     Response_Body = Response_Body.text
     Response_Body = Response_Body.replace('success:true','"success":true')
     Response_Body = Response_Body.replace('totalProperty','"totalProperty"')
@@ -783,23 +822,38 @@ def Query_POS_ID(Para_List_Box_Data):
     for each_POS_data in Response_Body['data']:
         List_POS_Name.append(each_POS_data['zh_label'])
         List_POS_ID.append(each_POS_data['int_id'])
-    Para_List_Box_Data['POS'] = dict(zip(List_POS_Name, List_POS_ID))
+    Para_List_Box_Data['POS_IDs'] = dict(zip(List_POS_Name, List_POS_ID))
 
 def Query_POS_Port_IDs(Para_List_Box_Data):
-    Para_List_Box_Data['POS_IDs'] = []
-    for valuevalue in Para_List_Box_Data['POS'].values():
+    Para_List_Box_Data['POS_Port_IDs'] = []
+    for valuevalue in Para_List_Box_Data['POS_IDs'].values():
         URL_Query_POS_Port_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
         Form_Info = '<params><param key="equ_type" value="pos"/><param key="equ_id" value="'+str(valuevalue)+'"/></params>'
         Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
         Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&lifeparams=" + parse.quote_plus(Form_Info_Tail)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
-        Response_Body = requests.post(URL_Query_POS_Port_IDs, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+        Response_Body = requests.post(URL_Query_POS_Port_IDs, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
         Response_Body = etree.HTML(Response_Body)
-        List_POS_IDs = Response_Body.xpath('//@id')
-        List_POS_IDs.pop(0)
-        Para_List_Box_Data['POS_IDs'].append(List_POS_IDs)
+        List_POS_Port_IDs = Response_Body.xpath('//@id')
+        List_POS_Port_IDs.pop(0)
+        List_POS_Port_Names = Response_Body.xpath('//@name')
+        Para_List_Box_Data['POS_Port_IDs'].append(List_POS_Port_IDs)
+        
+        #写入A_Port_ID,Z_Port_Name,Z_Port_ID
+        Dic_Port_Name_and_Port_ID = dict(zip(List_POS_Port_Names, List_POS_Port_IDs))
+        RE_Pattern = re.compile(r'^.*分光器')
+        for each_oc_data in List_OC_Data:
+            for each_name,each_id in Dic_Port_Name_and_Port_ID.items():
+                if each_oc_data['A_Port_Name'] == each_name:
+                    each_oc_data['A_Port_ID'] = each_id
+
+                Temp_Data = RE_Pattern.findall(each_oc_data['Z_POS_Name'])
+                Temp_Data = Temp_Data[0] + '-0-001'
+                if Temp_Data == each_name:
+                    each_oc_data['Z_Port_Name'] = each_name
+                    each_oc_data['Z_Port_ID'] = each_id
 
 def Query_Optical_Route_Sheet_ID():
     Task_Name_ID_List = List_7013[1][5].split('-')
@@ -815,13 +869,13 @@ def Query_Optical_Route_Sheet_ID():
         Form_Info_Encoded = 'processinstname=' + parse.quote_plus(Work_Sheet_Name)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
-        Response_Body = requests.post(URL_Query_Work_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+        Response_Body = requests.post(URL_Query_Work_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = Response_Body.text
         Response_Body = json.loads(Response_Body)
         Exist_Work_Sheet = Response_Body['totalCount']
         if Exist_Work_Sheet == 0: # Create
             URL_Create_New_Work_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/opticalSchedulingAction!init.ilf'
-            Response_Body = requests.get(URL_Create_New_Work_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+            Response_Body = requests.get(URL_Create_New_Work_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
             Response_Body = bytes(Response_Body.text, encoding="utf-8")
             Response_Body = etree.HTML(Response_Body)
             List_Work_Sheet_Info = Response_Body.xpath('//input/@value')
@@ -829,7 +883,7 @@ def Query_Optical_Route_Sheet_ID():
             Form_Info_Encoded = 'ownerId=' + List_Work_Sheet_Info[1] + '&deptId=' + List_Work_Sheet_Info[2] + '&flowId=' + List_Work_Sheet_Info[3] + '&companyName=' + parse.quote_plus(List_Work_Sheet_Info[7]) + '&companyId=' + List_Work_Sheet_Info[8] + '&workitemId=' + List_Work_Sheet_Info[10] + '&activeName=' + List_Work_Sheet_Info[14] + '&formNo=' + List_Work_Sheet_Info[15] + '&title=' + parse.quote_plus(Work_Sheet_Name) + '&startFlag=' + List_Work_Sheet_Info[19] + '&ownerName=' + parse.quote_plus(List_Work_Sheet_Info[21]) + '&cellPhone=' +List_Work_Sheet_Info[22] + '&deptName=' + parse.quote_plus(List_Work_Sheet_Info[23]) + '&startTime=' + parse.quote_plus(Work_Sheet_Times[0]) + '&acceptTime=' + parse.quote_plus(Work_Sheet_Times[1]) + '&replyTime=' + parse.quote_plus(Work_Sheet_Times[2]) + '&requestTime=' + parse.quote_plus(Work_Sheet_Times[3]) + '&urgentDegree=' + parse.quote_plus('一般') + '&schedulingReason='
             Request_Lenth = str(len(Form_Info_Encoded))
             Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
-            Response_Body = requests.post(URL_Create_New_Work_Sheet_Step_2, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+            Response_Body = requests.post(URL_Create_New_Work_Sheet_Step_2, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
             Repete_Start = (int(work_sheet_num) * 40)
             Repete_End = (int(work_sheet_num + 1) * 40)
             for oc_num in range(Repete_Start,Repete_End):
@@ -847,7 +901,7 @@ def Query_Optical_Route_Sheet_ID():
 def Query_Integrate_Sheet_ID():
 
     Task_Name_ID_List = List_7013[1][5].split('-')
-    Query_JSESSIONIRMS_and_route()
+    Query_Run_Certification()
 
     List_Integrate_Sheet_Name = ['关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请-汇聚', '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请-区内']
     for sheet_name in List_Integrate_Sheet_Name:
@@ -855,7 +909,7 @@ def Query_Integrate_Sheet_ID():
         Form_Info_Encoded = 'processinstname=' + parse.quote_plus(sheet_name)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
-        Response_Body = requests.post(URL_Query_Integrate_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+        Response_Body = requests.post(URL_Query_Integrate_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = Response_Body.text
         Response_Body = json.loads(Response_Body)
         if Response_Body['totalCount'] == 0:
@@ -863,7 +917,7 @@ def Query_Integrate_Sheet_ID():
             print(sheet_name,"无工单")
 
             # URL_Create_Integrate_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'
-            # Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+            # Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
             # Response_Body = bytes(Response_Body.text, encoding="utf-8")
             # Response_Body = etree.HTML(Response_Body)
             # List_Integrate_Sheet_Info = Response_Body.xpath('//input/@value')
@@ -887,7 +941,7 @@ def Query_OC_Int_ID():
         URL_Query_OC_Int_ID = URL_Query_OC_Int_ID + str(pro_id)
         XML_Info_Encoded = 'start=' + '0' + '&limit=' + '45'
         Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
-        Response_Body = requests.post(URL_Query_OC_Int_ID, headers=Request_Header, data=XML_Info_Encoded,  cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+        Response_Body = requests.post(URL_Query_OC_Int_ID, headers=Request_Header, data=XML_Info_Encoded,  cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = Response_Body.text
         Response_Body = json.loads(Response_Body)
         for oc_info_in_response in Response_Body['root']:
@@ -895,9 +949,6 @@ def Query_OC_Int_ID():
                 if oc_data['OC_Name'] == oc_info_in_response['opticname']:
                     oc_data['Int_ID'] = oc_info_in_response['intId']
                     break
-
-def Query_FS_ID():
-    ...
 
 def Execute_Push_Box():
     URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=move'
@@ -1061,7 +1112,7 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
     Form_Info_Encoded = 'proId=' + str(Para_List_OC_Data['Pro_ID']) + '&cityId=' + str(Para_List_OC_Data['City_ID']) + '&countyId=' + str(Para_List_OC_Data['County_ID']) + '&aportequname=' + parse.quote_plus(Para_List_OC_Data['A_Box_Name']) + '&aportequtype=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&aportequid=' + str(Para_List_OC_Data['A_Box_ID']) + '&asitename=' + parse.quote_plus(Para_List_OC_Data['A_ResPoint_Name']) + '&asitetype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '&asiteid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&aequname=' + parse.quote_plus(Para_List_OC_Data['A_POS_Name']) + '&aequid=' + str(Para_List_OC_Data['A_POS_ID']) + '&aequtype=' + str(Para_List_OC_Data['AEquType']) + '&ajoinName=' + parse.quote_plus(Para_List_OC_Data['AJoinName']) + '&zportequname=' + parse.quote_plus(Para_List_OC_Data['Z_Box_Name']) + '&zportequtype=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&zportequid=' + str(Para_List_OC_Data['Z_Box_ID']) + '&zsitename=' + parse.quote_plus(Para_List_OC_Data['Z_ResPoint_Name']) + '&zsitetype=' + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&zsiteid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&zequname=' + parse.quote_plus(Para_List_OC_Data['Z_POS_Name']) + '&zequid=' + str(Para_List_OC_Data['Z_POS_ID']) + '&zequtype=' + str(Para_List_OC_Data['ZEquType']) + '&zjoinName=' + parse.quote_plus(Para_List_OC_Data['ZJoinName']) + '&opticname=' + parse.quote_plus(Para_List_OC_Data['OC_Name']) + '&chengzaiyewu=' + parse.quote_plus(Para_List_OC_Data['Business_Name']) + '&sxbusstype=' + parse.quote_plus(Para_List_OC_Data['SXBussType']) + '&bakinfo=' + parse.quote_plus('无') + '&bussType=' + str(Para_List_OC_Data['BussType']) + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&serviceLevel=' + str(Para_List_OC_Data['ServiceLevel']) + '&fiberCount=' + str(Para_List_OC_Data['FiberCount']) + '&qualityGc=' + parse.quote_plus(Para_List_OC_Data['DQS_Project']) + '&qualityGcId=' + str(Para_List_OC_Data['DQS_Project_ID']) + '&qualityDs=' + parse.quote_plus(Para_List_OC_Data['DQS']) + '&qualityDsId=' + str(Para_List_OC_Data['DQS_ID']) + '&qualityQx=' + parse.quote_plus(Para_List_OC_Data['DQS_County']) + '&qualityQxId=' + str(Para_List_OC_Data['DQS_County_ID']) + '&maintain=' + parse.quote_plus(Para_List_OC_Data['DQS_Maintainer']) + '&maintainId=' + str(Para_List_OC_Data['DQS_Maintainer_ID']) + '&projectCodeName=' + parse.quote_plus(Para_List_OC_Data['Project_Code']) + '&projectCodeId=' + str(Para_List_OC_Data['Project_Code_ID']) + '&taskName=' + parse.quote_plus(Para_List_OC_Data['Task_Name']) + '&taskNameid=' + str(Para_List_OC_Data['Task_Name_ID'])
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
-    Response_Body = requests.post(URL_Generate_Optical_Circut, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v, 'route': route_v})
+    Response_Body = requests.post(URL_Generate_Optical_Circut, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
     Response_Body = Response_Body.text
     Response_Body = Response_Body.replace('success:true','"success":true')
     Response_Body = Response_Body.replace('mesg','"mesg"')
@@ -1078,7 +1129,6 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
 def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
-    # Query_Integrate_Sheet_ID()
 
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
@@ -1176,7 +1226,8 @@ def Main_Process(Para_File_Name):
 
     if (P9_Generate_Optical_Circuit or
         P10_Transmission_Design):
-        Query_JSESSIONIRMS_and_route()
+        Query_Run_Certification()
+        Query_Create_Certification()
         print('查询POS_ID开始')
         Swimming_Pool(Query_POS_ID, List_Box_Data)
         print('查询POS_ID结束')
@@ -1196,6 +1247,7 @@ def Main_Process(Para_File_Name):
         Query_OC_Int_ID()
         print('查询OC_Int_ID结束')
 
+
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
@@ -1212,7 +1264,7 @@ if __name__ == '__main__':
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
             Generate_Termination_and_Direct_Melt_Data()
-            Query_JSESSIONIRMS_and_route()
+            Query_Run_Certification()
             Swimming_Pool(Query_POS_ID, List_Box_Data)
             Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
             Generate_OC_POS_Data_and_OC_Name()
