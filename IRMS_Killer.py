@@ -22,6 +22,7 @@ import re
 外线是否可以构建自定义查询
 优化from语句
 建立工单可能有问题
+处理自定义占用从0开始
 '''
 
 File_Name = ['平舆小黑']
@@ -79,7 +80,7 @@ def Generate_Local_Data(Para_File_Name):
     Anchor_Point_Buttom = WS_obj['B6'].value
     Anchor_Point_Right  = WS_obj['B7'].value
 
-    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit, P10_Transmission_Design
+    global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit, P10_Transmission_Design,P11_Termination
     P0_Data_Check               = WS_obj['E2'].value
     P1_Push_Box                 = WS_obj['E3'].value
     P2_Generate_Support_Segment = WS_obj['E4'].value
@@ -91,6 +92,17 @@ def Generate_Local_Data(Para_File_Name):
     P8_Direct_Melt              = WS_obj['E10'].value
     P9_Generate_Optical_Circuit = WS_obj['E11'].value
     P10_Transmission_Design     = WS_obj['E12'].value
+    P11_Termination             = WS_obj['E13'].value
+
+    if (P9_Generate_Optical_Circuit and P10_Transmission_Design):
+        print('光路申请与传输设计不能同时进行')
+        exit()
+    if (P11_Termination and P10_Transmission_Design):
+        print('传输设计与备芯上架不能同时进行')
+        exit()
+    if (P9_Generate_Optical_Circuit and P11_Termination):
+        print('光路申请与备芯上架不能同时进行')
+        exit()
 
     # 根据照片修改数据
     global List_Modify_For_Photo
@@ -142,7 +154,7 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design or P11_Termination:
         '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
         WS_obj = WB_obj['OCS_List']
         global List_CS_Data
@@ -451,7 +463,7 @@ def Generate_Termination_and_Direct_Melt_Data():
             # 注意!注意!注意!
             box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied
             box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free
-            box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied + List_Terminal_ID_and_Fiber_ID_Free
+            # box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied + List_Terminal_ID_and_Fiber_ID_Free
 
            # 根据照片修改数据
             if len(List_Modify_For_Photo) != 0:
@@ -505,7 +517,7 @@ def Generate_Termination_and_Direct_Melt_Data():
                 # 注意!注意!注意!
                 box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify
                 box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free_Modify
-                box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify + List_Terminal_ID_and_Fiber_ID_Free_Modify
+                # box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify + List_Terminal_ID_and_Fiber_ID_Free_Modify
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -571,7 +583,7 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design:
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design or P11_Termination:
         for ocs_num in List_CS_Data:
             for box_num in List_Box_Data:
                 if ocs_num['A_Box_Name'] == box_num['Box_Name']:
@@ -1126,6 +1138,35 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
     Response_Body = json.loads(Response_Body)
     print('P9-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
 
+def Execute_Termination_2nd(Para_List_Box_Data):
+
+    if Para_List_Box_Data['1FS_Count'] == 0:
+        termination_datas = []
+        for termination_num in range(Para_List_Box_Data['Termination_Count']):
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Termination_Fiber_IDs'][termination_num])+'" z_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" z_equ_type="'+str(Para_List_Box_Data['Box_Type_Short'])+'" z_port_id="'+str(Para_List_Box_Data['Terminal_IDs'][termination_num])+'" a_equ_id="" a_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
+            termination_datas.append(termination_data)
+        Form_Info_Body = ''.join(termination_datas)
+
+    elif Para_List_Box_Data['1FS_Count'] != 0:
+        termination_datas = []
+        for termination_num in range(int(len(Para_List_Box_Data['Direct_Melt_Start']))):
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
+            termination_datas.append(termination_data)
+        Form_Info_Body = ''.join(termination_datas)
+
+    URL_Termination = 'http://10.209.199.74:8120/igisserver_osl/rest/jumperandfiber/saveFiber'
+    Form_Info_Head = '<params>'
+    Form_Info_Butt = '</params>'
+    Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
+    Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
+    Request_Lenth = str(len(Form_Info_Encoded))
+    Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Termination, data=Form_Info_Encoded, headers=Request_Header)
+    Response_Body = bytes(Response_Body.text, encoding="utf-8")
+    Response_Body = etree.HTML(Response_Body)
+    List_Termination_State = Response_Body.xpath('//@msg')
+    print('P11-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
+
 def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
@@ -1247,6 +1288,10 @@ def Main_Process(Para_File_Name):
         Query_OC_Int_ID()
         print('查询OC_Int_ID结束')
 
+    if P10_Transmission_Design:
+        print('P10-开始')
+
+        print('P10开始')
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
