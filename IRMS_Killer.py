@@ -1138,14 +1138,56 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
     Response_Body = json.loads(Response_Body)
     print('P9-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
 
+def Execute_Transmission_Design(Para_List_OC_Data):
+    if Para_List_OC_Data['A_Box_Name'] != Para_List_OC_Data['Z_Box_Name']:# 业务光路
+
+        # 通路占用开始
+        URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
+        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
+        URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
+        Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = etree.HTML(Response_Body.text)
+        List_Path_IDs = Response_Body.xpath('//line/@id')
+        Use_Path = List_Path_IDs[0]
+
+        # 可能是bug
+        if len(Use_Path.split(' ')) != 1:
+            Use_Path = Use_Path.split(' ')
+            Use_Path = Use_Path[len(Use_Path) - 1]
+        Para_List_OC_Data['Occupy_Path'] = Use_Path
+        #
+
+        URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
+        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
+        URL_Occupy_Path = URL_Occupy_Path + Query_Detail
+        Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = etree.HTML(Response_Body.text)
+        Occupy_Result = Response_Body.xpath('//@success')
+        print('P10通路占用-{}-{}'.format(Occupy_Result[0], Para_List_OC_Data['OC_Name']))
+        # 通路占用结束
+
+        # 端口配置开始
+        URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!updateworkernew.ilf'
+        XML_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + "&zobjecttype=" + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(str(Para_List_OC_Data['A_ResPoint_Name'])) + '&zobjectname=' + parse.quote_plus(str(Para_List_OC_Data['Z_ResPoint_Name'])) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + "&zneid=" + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(str(Para_List_OC_Data['A_POS_Name'])) + '&znename=' + parse.quote_plus(str(Para_List_OC_Data['Z_POS_Name'])) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(str(Para_List_OC_Data['A_Port_Name'])) + '&zportname=' + parse.quote_plus(str(Para_List_OC_Data['Z_Port_Name'])) + '&isgenerateFiber=' + '1' + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + "&znetype=" + str(Para_List_OC_Data['ZEquType'])
+        Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
+        Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=XML_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = Response_Body.text
+        Response_Body = Response_Body.replace('success','"success"')
+        Response_Body = Response_Body.replace('mesg','"mesg"')
+        Response_Body = Response_Body.replace('detail','"detail"')
+        Response_Body = Response_Body.replace('\'','\"')
+        Response_Body = json.loads(Response_Body)
+        print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
+        # 端口配置开始
+
+    elif Para_List_OC_Data['A_Box_Name'] == Para_List_OC_Data['Z_Box_Name']:# 尾纤光路
+        
+        ...
+
 def Execute_Termination_2nd(Para_List_Box_Data):
 
     if Para_List_Box_Data['1FS_Count'] == 0:
-        termination_datas = []
-        for termination_num in range(Para_List_Box_Data['Termination_Count']):
-            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Termination_Fiber_IDs'][termination_num])+'" z_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" z_equ_type="'+str(Para_List_Box_Data['Box_Type_Short'])+'" z_port_id="'+str(Para_List_Box_Data['Terminal_IDs'][termination_num])+'" a_equ_id="" a_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
-            termination_datas.append(termination_data)
-        Form_Info_Body = ''.join(termination_datas)
+        pass
 
     elif Para_List_Box_Data['1FS_Count'] != 0:
         termination_datas = []
@@ -1290,8 +1332,10 @@ def Main_Process(Para_File_Name):
 
     if P10_Transmission_Design:
         print('P10-开始')
-
-        print('P10开始')
+        for each_oc_data in List_OC_Data:
+            Execute_Transmission_Design(each_oc_data)
+        # Swimming_Pool(Execute_Transmission_Design, List_OC_Data)
+        print('P10-结束')
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
