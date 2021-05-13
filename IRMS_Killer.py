@@ -951,9 +951,9 @@ def Query_OC_Int_ID():
     for pro_id in List_Pro_ID:
         URL_Query_OC_Int_ID = 'http://10.209.199.72:7112/irms/opticOpenApplyAction!queryOptictemp.ilf?flowId='
         URL_Query_OC_Int_ID = URL_Query_OC_Int_ID + str(pro_id)
-        XML_Info_Encoded = 'start=' + '0' + '&limit=' + '45'
+        Form_Info_Encoded = 'start=' + '0' + '&limit=' + '45'
         Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
-        Response_Body = requests.post(URL_Query_OC_Int_ID, headers=Request_Header, data=XML_Info_Encoded,  cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = requests.post(URL_Query_OC_Int_ID, headers=Request_Header, data=Form_Info_Encoded,  cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = Response_Body.text
         Response_Body = json.loads(Response_Body)
         for oc_info_in_response in Response_Body['root']:
@@ -1140,50 +1140,75 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
 
 def Execute_Transmission_Design(Para_List_OC_Data):
     if Para_List_OC_Data['A_Box_Name'] != Para_List_OC_Data['Z_Box_Name']:# 业务光路
+        ...
+        # # 通路占用开始
+        # URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
+        # URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
+        # Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        # Response_Body = etree.HTML(Response_Body.text)
+        # List_Path_IDs = Response_Body.xpath('//line/@id')
+        # Use_Path = List_Path_IDs[0]
 
-        # 通路占用开始
-        URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
-        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
-        URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
-        Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        Response_Body = etree.HTML(Response_Body.text)
-        List_Path_IDs = Response_Body.xpath('//line/@id')
-        Use_Path = List_Path_IDs[0]
+        # # 可能是bug
+        # if len(Use_Path.split(' ')) != 1:
+        #     Use_Path = Use_Path.split(' ')
+        #     Use_Path = Use_Path[len(Use_Path) - 1]
+        # Para_List_OC_Data['Occupy_Path'] = Use_Path
+        # #
 
-        # 可能是bug
-        if len(Use_Path.split(' ')) != 1:
-            Use_Path = Use_Path.split(' ')
-            Use_Path = Use_Path[len(Use_Path) - 1]
-        Para_List_OC_Data['Occupy_Path'] = Use_Path
-        #
+        # URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
+        # Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
+        # URL_Occupy_Path = URL_Occupy_Path + Query_Detail
+        # Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        # Response_Body = etree.HTML(Response_Body.text)
+        # Occupy_Result = Response_Body.xpath('//@success')
+        # print('P10通路占用-{}-{}'.format(Occupy_Result[0], Para_List_OC_Data['OC_Name']))
+        # # 通路占用结束
 
-        URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
-        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
-        URL_Occupy_Path = URL_Occupy_Path + Query_Detail
-        Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        Response_Body = etree.HTML(Response_Body.text)
-        Occupy_Result = Response_Body.xpath('//@success')
-        print('P10通路占用-{}-{}'.format(Occupy_Result[0], Para_List_OC_Data['OC_Name']))
-        # 通路占用结束
+        # # 端口配置开始
+        # URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!updateworkernew.ilf'
+        # Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + "&zobjecttype=" + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(str(Para_List_OC_Data['A_ResPoint_Name'])) + '&zobjectname=' + parse.quote_plus(str(Para_List_OC_Data['Z_ResPoint_Name'])) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + "&zneid=" + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(str(Para_List_OC_Data['A_POS_Name'])) + '&znename=' + parse.quote_plus(str(Para_List_OC_Data['Z_POS_Name'])) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(str(Para_List_OC_Data['A_Port_Name'])) + '&zportname=' + parse.quote_plus(str(Para_List_OC_Data['Z_Port_Name'])) + '&isgenerateFiber=' + '1' + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + "&znetype=" + str(Para_List_OC_Data['ZEquType'])
+        # Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
+        # Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=Form_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        # Response_Body = Response_Body.text
+        # Response_Body = Response_Body.replace('success','"success"')
+        # Response_Body = Response_Body.replace('mesg','"mesg"')
+        # Response_Body = Response_Body.replace('detail','"detail"')
+        # Response_Body = Response_Body.replace('\'','\"')
+        # Response_Body = json.loads(Response_Body)
+        # print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
+        # # 端口配置结束
+
+    elif Para_List_OC_Data['A_Box_Name'] == Para_List_OC_Data['Z_Box_Name']:# 尾纤光路
+
+        # 跳纤开始
+        URL_Save_Jumper = 'http://10.209.199.74:8120/igisserver_osl/rest/jumperandfiber/saveJumper'
+        Form_Info_1 = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
+        Form_Info_2 = '<params><param a_site_type="' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '" a_site_id="' + str(Para_List_OC_Data['A_ResPoint_ID']) + '" a_equ_type="pos" a_equ_id="' + str(Para_List_OC_Data['A_POS_ID']) + '" a_port_type="pos_port" a_port_id="' + str(Para_List_OC_Data['A_Port_ID']) + '" z_site_type="'+ str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '" z_site_id="' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '" z_equ_type="pos" z_equ_id="' + str(Para_List_OC_Data['Z_POS_ID']) + '" z_port_type="pos_port" z_port_id="' + str(Para_List_OC_Data['Z_Port_ID']) + '"/></params>'
+        Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_2) + '&lifeparams=' + parse.quote_plus(Form_Info_1)
+        Request_Header = {"Host":"10.209.199.74:8120","Content-Type":"application/x-www-form-urlencoded"}
+        Response_Body = requests.post(URL_Save_Jumper, headers=Request_Header, data=Form_Info_Encoded)
+        Response_Body = bytes(Response_Body.text, encoding="utf-8")
+        Response_Body = etree.HTML(Response_Body)
+        List_Jumper_State = Response_Body.xpath('//@msg')
+        print('P10跳纤-{}-{}'.format(List_Jumper_State[0], Para_List_OC_Data['OC_Name']))
+        # 跳纤结束
 
         # 端口配置开始
-        URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!updateworkernew.ilf'
-        XML_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + "&zobjecttype=" + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(str(Para_List_OC_Data['A_ResPoint_Name'])) + '&zobjectname=' + parse.quote_plus(str(Para_List_OC_Data['Z_ResPoint_Name'])) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + "&zneid=" + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(str(Para_List_OC_Data['A_POS_Name'])) + '&znename=' + parse.quote_plus(str(Para_List_OC_Data['Z_POS_Name'])) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(str(Para_List_OC_Data['A_Port_Name'])) + '&zportname=' + parse.quote_plus(str(Para_List_OC_Data['Z_Port_Name'])) + '&isgenerateFiber=' + '1' + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + "&znetype=" + str(Para_List_OC_Data['ZEquType'])
+        URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!saveweixianpeizhi.ilf'
+        Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID'])+'&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '&zobjecttype=' + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(Para_List_OC_Data['A_ResPoint_Name']) + '&zobjectname=' + parse.quote_plus(Para_List_OC_Data['Z_ResPoint_Name']) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + '&zneid=' + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(Para_List_OC_Data['A_POS_Name']) + '&znename=' + parse.quote_plus(Para_List_OC_Data['Z_POS_Name']) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(Para_List_OC_Data['A_Port_Name']) + '&zportname=' + parse.quote_plus(Para_List_OC_Data['Z_Port_Name']) + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + '&znetype=' + str(Para_List_OC_Data['ZEquType']) + '&fibercount=' + '1'
         Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
-        Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=XML_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=Form_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = Response_Body.text
         Response_Body = Response_Body.replace('success','"success"')
         Response_Body = Response_Body.replace('mesg','"mesg"')
         Response_Body = Response_Body.replace('detail','"detail"')
         Response_Body = Response_Body.replace('\'','\"')
+        Response_Body = Response_Body.replace('""detail"','"detail')
         Response_Body = json.loads(Response_Body)
         print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
-        # 端口配置开始
-
-    elif Para_List_OC_Data['A_Box_Name'] == Para_List_OC_Data['Z_Box_Name']:# 尾纤光路
-        
-        ...
-
+        # 端口配置结束
+        print('1')
 def Execute_Termination_2nd(Para_List_Box_Data):
 
     if Para_List_Box_Data['1FS_Count'] == 0:
