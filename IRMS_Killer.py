@@ -1140,44 +1140,37 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
 
 def Execute_Transmission_Design(Para_List_OC_Data):
     if Para_List_OC_Data['A_Box_Name'] != Para_List_OC_Data['Z_Box_Name']:# 业务光路
-        ...
-        # # 通路占用开始
-        # URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
-        # URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
-        # Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        # Response_Body = etree.HTML(Response_Body.text)
-        # List_Path_IDs = Response_Body.xpath('//line/@id')
-        # Use_Path = List_Path_IDs[0]
 
-        # # 可能是bug
-        # if len(Use_Path.split(' ')) != 1:
-        #     Use_Path = Use_Path.split(' ')
-        #     Use_Path = Use_Path[len(Use_Path) - 1]
-        # Para_List_OC_Data['Occupy_Path'] = Use_Path
-        # #
+        # 通路占用开始
+        URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
+        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
+        URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
+        Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = etree.HTML(Response_Body.text)
+        List_Path_IDs = Response_Body.xpath('//line/@id')
+        Use_Path = List_Path_IDs[0]
+        URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
+        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
+        URL_Occupy_Path = URL_Occupy_Path + Query_Detail
+        Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = etree.HTML(Response_Body.text)
+        Occupy_Result = Response_Body.xpath('//@success')
+        print('P10通路占用-{}-{}'.format(Occupy_Result[0], Para_List_OC_Data['OC_Name']))
+        # 通路占用结束
 
-        # URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
-        # Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
-        # URL_Occupy_Path = URL_Occupy_Path + Query_Detail
-        # Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        # Response_Body = etree.HTML(Response_Body.text)
-        # Occupy_Result = Response_Body.xpath('//@success')
-        # print('P10通路占用-{}-{}'.format(Occupy_Result[0], Para_List_OC_Data['OC_Name']))
-        # # 通路占用结束
-
-        # # 端口配置开始
-        # URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!updateworkernew.ilf'
-        # Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + "&zobjecttype=" + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(str(Para_List_OC_Data['A_ResPoint_Name'])) + '&zobjectname=' + parse.quote_plus(str(Para_List_OC_Data['Z_ResPoint_Name'])) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + "&zneid=" + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(str(Para_List_OC_Data['A_POS_Name'])) + '&znename=' + parse.quote_plus(str(Para_List_OC_Data['Z_POS_Name'])) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(str(Para_List_OC_Data['A_Port_Name'])) + '&zportname=' + parse.quote_plus(str(Para_List_OC_Data['Z_Port_Name'])) + '&isgenerateFiber=' + '1' + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + "&znetype=" + str(Para_List_OC_Data['ZEquType'])
-        # Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
-        # Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=Form_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        # Response_Body = Response_Body.text
-        # Response_Body = Response_Body.replace('success','"success"')
-        # Response_Body = Response_Body.replace('mesg','"mesg"')
-        # Response_Body = Response_Body.replace('detail','"detail"')
-        # Response_Body = Response_Body.replace('\'','\"')
-        # Response_Body = json.loads(Response_Body)
-        # print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
-        # # 端口配置结束
+        # 端口配置开始
+        URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!updateworkernew.ilf'
+        Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + "&zobjecttype=" + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(str(Para_List_OC_Data['A_ResPoint_Name'])) + '&zobjectname=' + parse.quote_plus(str(Para_List_OC_Data['Z_ResPoint_Name'])) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + "&zneid=" + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(str(Para_List_OC_Data['A_POS_Name'])) + '&znename=' + parse.quote_plus(str(Para_List_OC_Data['Z_POS_Name'])) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(str(Para_List_OC_Data['A_Port_Name'])) + '&zportname=' + parse.quote_plus(str(Para_List_OC_Data['Z_Port_Name'])) + '&isgenerateFiber=' + '1' + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + "&znetype=" + str(Para_List_OC_Data['ZEquType'])
+        Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
+        Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=Form_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+        Response_Body = Response_Body.text
+        Response_Body = Response_Body.replace('success','"success"')
+        Response_Body = Response_Body.replace('mesg','"mesg"')
+        Response_Body = Response_Body.replace('detail','"detail"')
+        Response_Body = Response_Body.replace('\'','\"')
+        Response_Body = json.loads(Response_Body)
+        print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
+        # 端口配置结束
 
     elif Para_List_OC_Data['A_Box_Name'] == Para_List_OC_Data['Z_Box_Name']:# 尾纤光路
 
@@ -1208,7 +1201,7 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         Response_Body = json.loads(Response_Body)
         print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
         # 端口配置结束
-        print('1')
+
 def Execute_Termination_2nd(Para_List_Box_Data):
 
     if Para_List_Box_Data['1FS_Count'] == 0:
@@ -1247,7 +1240,8 @@ def Main_Process(Para_File_Name):
         P7_Termination or
         P8_Direct_Melt or
         P9_Generate_Optical_Circuit or
-        P10_Transmission_Design):
+        P10_Transmission_Design or
+        P11_Termination):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
@@ -1282,7 +1276,8 @@ def Main_Process(Para_File_Name):
 
     if (P4_Cable_Lay or
         P7_Termination or
-        P8_Direct_Melt):
+        P8_Direct_Melt or
+        P11_Termination):
         if (not ('Support_Seg_ID' in List_CS_Data[0])) or (not ('Cable_Seg_ID' in List_CS_Data[0])):
             print('查询Support_Seg_ID/Cable_Seg_ID开始')
             Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
@@ -1296,10 +1291,10 @@ def Main_Process(Para_File_Name):
     if (P5_Generate_ODM or
         P6_Generate_Tray or
         P7_Termination or
-        P8_Direct_Melt):
+        P8_Direct_Melt or
+        P11_Termination):
         Generate_Topology()
         Generate_FS_Data()
-        
 
     if P5_Generate_ODM:
         print('P5-开始')
@@ -1308,7 +1303,8 @@ def Main_Process(Para_File_Name):
 
     if (P6_Generate_Tray or
         P7_Termination or
-        P8_Direct_Melt): # 单独添加托盘需要查询
+        P8_Direct_Melt or
+        P11_Termination): # 单独添加托盘需要查询
         if not ('ODM_ID' in List_Box_Data[0]):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
@@ -1320,17 +1316,22 @@ def Main_Process(Para_File_Name):
         print('P6-结束')
 
     if (P7_Termination or
-        P8_Direct_Melt):
+        P8_Direct_Melt or
+        P11_Termination):
         print('查询Cable_Fiber_ID开始')
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         print('查询Cable_Fiber_ID结束')
         Generate_Termination_and_Direct_Melt_Data()
 
     if P7_Termination:
+        print('P7-开始')
         Swimming_Pool(Execute_Termination, List_Box_Data)
+        print('P7-结束')
 
     if P8_Direct_Melt:
+        print('P8-开始')
         Swimming_Pool(Execute_Direct_Melt, List_Box_Data)
+        print('P8-结束')
 
     if (P9_Generate_Optical_Circuit or
         P10_Transmission_Design):
@@ -1361,6 +1362,10 @@ def Main_Process(Para_File_Name):
             Execute_Transmission_Design(each_oc_data)
         # Swimming_Pool(Execute_Transmission_Design, List_OC_Data)
         print('P10-结束')
+    if P11_Termination:
+        print('P11-开始')
+        Swimming_Pool(Execute_Termination_2nd, List_Box_Data)
+        print('P11-结束')
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
