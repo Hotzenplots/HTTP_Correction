@@ -112,6 +112,7 @@ def Generate_Local_Data(Para_File_Name):
         List_Modify_For_Photo.append([WS_obj[('H' + str(2 + box_num))].value, WS_obj[('I' + str(2 + box_num))].value, WS_obj[('J' + str(2 + box_num))].value])
         box_num += 1
 
+
     # 箱体类型ID
     List_Box_Type = [['guangfenxianxiang', 9204, 9115], ['guangjiaojiexiang', 9203, 9115]]
 
@@ -470,7 +471,7 @@ def Generate_Termination_and_Direct_Melt_Data():
                 List_Terminal_ID_and_Fiber_ID_Occupied_Modify = []
                 for modify_data in List_Modify_For_Photo:
                     if modify_data[0] == box_info['Box_Name']:
-                        List_Modidy_Termination = [int(i) for i in modify_data[2].split(',')]
+                        List_Modidy_Termination = [(int(i) - 1) for i in modify_data[2].split(',')]
 
                         # 自定义上架写入Terminal_ID
                         for terminal_id_sequence in List_Modidy_Termination:
@@ -1148,15 +1149,23 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
         Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = etree.HTML(Response_Body.text)
+
+        # 处理重复通路的系统bug开始
         List_Path_IDs = Response_Body.xpath('//line/@id')
-        Use_Path = List_Path_IDs[0]
-        Para_List_OC_Data['Occupy_Path'] = Use_Path
+        List_FiberNo = Response_Body.xpath('//line/@fiberno')
+        Dic_Paths = dict(zip(List_FiberNo,List_Path_IDs))
+        List_Path_IDs = []
+        for path in Dic_Paths.values():
+            List_Path_IDs.append(path)
+        Para_List_OC_Data['Occupy_Path'] = List_Path_IDs[(List_OC_Path_Pointer[Para_List_OC_Data['Z_Box_Name']])]
+        # 处理重复通路的系统bug结束
         URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
         Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
         URL_Occupy_Path = URL_Occupy_Path + Query_Detail
         Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = etree.HTML(Response_Body.text)
         Occupy_Result = Response_Body.xpath('//@success')
+
         print('P10通路占用-{}-{}'.format(Occupy_Result[0], Para_List_OC_Data['OC_Name']))
         # 通路占用结束
 
@@ -1172,6 +1181,9 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         Response_Body = Response_Body.replace('\'','\"')
         Response_Body = json.loads(Response_Body)
         print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
+        # 处理重复通路的系统bug开始
+        List_OC_Path_Pointer[Para_List_OC_Data['Z_Box_Name']] += 1
+        # 处理重复通路的系统bug结束
         # 端口配置结束
 
     elif Para_List_OC_Data['A_Box_Name'] == Para_List_OC_Data['Z_Box_Name']:# 尾纤光路
@@ -1359,11 +1371,18 @@ def Main_Process(Para_File_Name):
         print('查询OC_Int_ID结束')
 
     if P10_Transmission_Design:
+        # 处理重复通路的系统bug开始
+        global List_OC_Path_Pointer
+        List_OC_Path_Pointer = {}
+        for each_oc_data in List_OC_Data:
+            List_OC_Path_Pointer[each_oc_data['Z_Box_Name']] = 0
+        # 处理重复通路的系统bug结束
         print('P10-开始')
         for each_oc_data in List_OC_Data:
             Execute_Transmission_Design(each_oc_data)
         # Swimming_Pool(Execute_Transmission_Design, List_OC_Data)
         print('P10-结束')
+
     if P11_Termination:
         print('P11-开始')
         Swimming_Pool(Execute_Termination_2nd, List_Box_Data)
@@ -1445,38 +1464,3 @@ if __name__ == '__main__':
 
             WB_obj.save(each_File_Name+'.xlsx')
             WB_obj.close()
-
-# print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
-
-# 0'太原', 
-# 1'阳曲县', 
-# 2'太原阳曲县山西豪德置业有限公司企业宽带GF1006号东楼道GF2006二级分光器001', 
-# 3'太原阳曲县山西豪德置业有限公司企业宽带GF1006号东楼道GF2006', 
-# 4'B20304188218004', 
-# 5'2870791671-山西豪德置业有限公司',
-# 6'太原阳曲县大盂-OLT68-FH-AN5516-01',
-# 7'ME_大盂:Board_GCOB[1]-PTP_GPON4', 
-# 8'太原阳曲县山西豪德置业有限公司企业宽带1-7#东楼道2号一级分光器', 
-# 9'太原阳曲县山西豪德置业有限公司企业宽带1-7#东楼道2号一级分光器-1-006', 
-# 10'二级', 
-# 11'太原阳曲县山西豪德置业有限公司企业宽带1-6#东楼道2-6二级分光器'
-
-# 0 阳曲县
-# 1 445835318
-# 2 tyyangwei
-# 3 246552123
-# 4 lurui2
-# 5 246552126
-# 6 liupeixu
-# 7 483582248
-# 8 tt_1_lvmai
-# 9 685585124
-# 10 1685585124
-# 11 杨伟
-# 12 卢锐
-# 13 刘沛旭
-# 14 吕迈
-# 15 太原
-# 16 445835190
-# 17 tyyangwei
-# 18 tyyw789...
