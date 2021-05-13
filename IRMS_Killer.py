@@ -471,53 +471,54 @@ def Generate_Termination_and_Direct_Melt_Data():
                 for modify_data in List_Modify_For_Photo:
                     if modify_data[0] == box_info['Box_Name']:
                         List_Modidy_Termination = [int(i) for i in modify_data[2].split(',')]
-                # 自定义上架写入Terminal_ID
-                for terminal_id_sequence in List_Modidy_Termination:
-                    List_Terminal_ID_and_Fiber_ID_Occupied_Modify.append([terminal_id_sequence,box_info['Terminal_IDs'][terminal_id_sequence]])
-                for sub_list, sub_list_modify in zip(List_Terminal_ID_and_Fiber_ID_Occupied, List_Terminal_ID_and_Fiber_ID_Occupied_Modify):
-                    sub_list_modify.append(sub_list[2])
-                    sub_list_modify.append(sub_list[3])
 
-                # 生成备芯数据,为了思路清晰,分步处理
+                        # 自定义上架写入Terminal_ID
+                        for terminal_id_sequence in List_Modidy_Termination:
+                            List_Terminal_ID_and_Fiber_ID_Occupied_Modify.append([terminal_id_sequence,box_info['Terminal_IDs'][terminal_id_sequence]])
+                        for sub_list, sub_list_modify in zip(List_Terminal_ID_and_Fiber_ID_Occupied, List_Terminal_ID_and_Fiber_ID_Occupied_Modify):
+                            sub_list_modify.append(sub_list[2])
+                            sub_list_modify.append(sub_list[3])
 
-                # 分离自定占用的端子和纤芯
-                List_Terminal_ID_Occupied_Modify = []
-                List_Fiber_ID_Occupied_Modify = []
-                for sequence in List_Terminal_ID_and_Fiber_ID_Occupied_Modify:
-                    List_Terminal_ID_Occupied_Modify.append([sequence[0],sequence[1]])
-                    List_Fiber_ID_Occupied_Modify.append([sequence[2],sequence[3]])
+                        # 生成备芯数据,为了思路清晰,分步处理
 
-                # 分离原始全部的端子和纤芯
-                List_Terminal_ID_All = []
-                List_Fiber_ID_All = []
-                for sequence in List_Terminal_ID_and_Fiber_ID_All:
-                    List_Terminal_ID_All.append([sequence[0],sequence[1]])
-                    List_Fiber_ID_All.append([sequence[2],sequence[3]])
+                        # 分离自定占用的端子和纤芯
+                        List_Terminal_ID_Occupied_Modify = []
+                        List_Fiber_ID_Occupied_Modify = []
+                        for sequence in List_Terminal_ID_and_Fiber_ID_Occupied_Modify:
+                            List_Terminal_ID_Occupied_Modify.append([sequence[0],sequence[1]])
+                            List_Fiber_ID_Occupied_Modify.append([sequence[2],sequence[3]])
 
-                # 生成备芯数据
-                List_Terminal_ID_Free_Modify = copy.deepcopy(List_Terminal_ID_All)
-                List_Fiber_ID_Free_Modify = copy.deepcopy(List_Fiber_ID_All)
+                        # 分离原始全部的端子和纤芯
+                        List_Terminal_ID_All = []
+                        List_Fiber_ID_All = []
+                        for sequence in List_Terminal_ID_and_Fiber_ID_All:
+                            List_Terminal_ID_All.append([sequence[0],sequence[1]])
+                            List_Fiber_ID_All.append([sequence[2],sequence[3]])
 
-                # 端子
-                for sequence_occupied in List_Terminal_ID_Occupied_Modify:
-                    for sequence_free in List_Terminal_ID_Free_Modify:
-                        if sequence_free[1] == sequence_occupied[1]:
-                            List_Terminal_ID_Free_Modify.remove(sequence_free)
+                        # 生成备芯数据
+                        List_Terminal_ID_Free_Modify = copy.deepcopy(List_Terminal_ID_All)
+                        List_Fiber_ID_Free_Modify = copy.deepcopy(List_Fiber_ID_All)
 
-                # 纤芯
-                for sequence_occupied in List_Fiber_ID_Free_Modify:
-                    for sequence_free in List_Fiber_ID_Occupied_Modify:
-                        if sequence_free[1] == sequence_occupied[1]:
-                            List_Fiber_ID_Free_Modify.remove(sequence_free)
+                        # 端子
+                        for sequence_occupied in List_Terminal_ID_Occupied_Modify:
+                            for sequence_free in List_Terminal_ID_Free_Modify:
+                                if sequence_free[1] == sequence_occupied[1]:
+                                    List_Terminal_ID_Free_Modify.remove(sequence_free)
 
-                # 合并端子和纤芯
-                List_Terminal_ID_and_Fiber_ID_Free_Modify = []
-                for terminal_id_sequence, fiber_id_sequence in zip(List_Terminal_ID_Free_Modify, List_Fiber_ID_Free_Modify):
-                    List_Terminal_ID_and_Fiber_ID_Free_Modify.append([terminal_id_sequence[0], terminal_id_sequence[1], fiber_id_sequence[0], fiber_id_sequence[1]])
-                # 注意!注意!注意!
-                box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify
-                box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free_Modify
-                # box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify + List_Terminal_ID_and_Fiber_ID_Free_Modify
+                        # 纤芯
+                        for sequence_occupied in List_Fiber_ID_Free_Modify:
+                            for sequence_free in List_Fiber_ID_Occupied_Modify:
+                                if sequence_free[1] == sequence_occupied[1]:
+                                    List_Fiber_ID_Free_Modify.remove(sequence_free)
+
+                        # 合并端子和纤芯
+                        List_Terminal_ID_and_Fiber_ID_Free_Modify = []
+                        for terminal_id_sequence, fiber_id_sequence in zip(List_Terminal_ID_Free_Modify, List_Fiber_ID_Free_Modify):
+                            List_Terminal_ID_and_Fiber_ID_Free_Modify.append([terminal_id_sequence[0], terminal_id_sequence[1], fiber_id_sequence[0], fiber_id_sequence[1]])
+                        # 注意!注意!注意!
+                        box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify
+                        box_info['Direct_Melt_Start'] = List_Terminal_ID_and_Fiber_ID_Free_Modify
+                        # box_info['Direct_Melt_Count'] = List_Terminal_ID_and_Fiber_ID_Occupied_Modify + List_Terminal_ID_and_Fiber_ID_Free_Modify
 
 def Generate_OC_POS_Data_and_OC_Name():
     List_OC_Name = []
@@ -1149,6 +1150,7 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         Response_Body = etree.HTML(Response_Body.text)
         List_Path_IDs = Response_Body.xpath('//line/@id')
         Use_Path = List_Path_IDs[0]
+        Para_List_OC_Data['Occupy_Path'] = Use_Path
         URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
         Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
         URL_Occupy_Path = URL_Occupy_Path + Query_Detail
@@ -1384,6 +1386,7 @@ if __name__ == '__main__':
             Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
             Generate_Termination_and_Direct_Melt_Data()
             Query_Run_Certification()
+            Query_Create_Certification()
             Swimming_Pool(Query_POS_ID, List_Box_Data)
             Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
             Generate_OC_POS_Data_and_OC_Name()
