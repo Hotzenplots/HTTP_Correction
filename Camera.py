@@ -45,22 +45,28 @@ def Modify_Phote_Coordinate():
             Obj_img = pyexiv2.Image(photo_name, 'gb2312')
 
             Exif_Data = Obj_img.read_exif()
-            Origin_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
-            Origin_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
-            Origin_Longitude_DD = DMS2DD(Origin_Longitude)
-            Origin_Latitude_DD = DMS2DD(Origin_Latitude)
+            try:
+                Origin_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
+                Origin_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
+                Origin_Longitude_DD = DMS2DD(Origin_Longitude)
+                Origin_Latitude_DD = DMS2DD(Origin_Latitude)
+            except:
+                ...
+            finally:
+                Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']) + random_num)}
+                Obj_img.modify_exif(Dic_New_Coordinate)
+                Exif_Data = Obj_img.read_exif()
+                New_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
+                New_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
+                New_Longitude_DD = DMS2DD(New_Longitude)
+                New_Latitude_DD = DMS2DD(New_Latitude)
 
-            Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']) + random_num)}
-            Obj_img.modify_exif(Dic_New_Coordinate)
-            Exif_Data = Obj_img.read_exif()
-            New_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
-            New_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
-            New_Longitude_DD = DMS2DD(New_Longitude)
-            New_Latitude_DD = DMS2DD(New_Latitude)
-
-            Obj_img.close()
-
-            print(photo_name,r'原坐标/新坐标:',str(round(Origin_Longitude_DD,4)) + r'/' + str(round(New_Longitude_DD,4)),'|||',str(round(Origin_Latitude_DD,4)) + r'/'+str(round(New_Latitude_DD,4)))
+                Obj_img.close()
+            
+            try:
+                print(photo_name,r'原坐标/新坐标:',str(round(Origin_Longitude_DD,4)) + r'/' + str(round(New_Longitude_DD,4)),'|||',str(round(Origin_Latitude_DD,4)) + r'/'+str(round(New_Latitude_DD,4)))
+            except:
+                print(photo_name,'新坐标:'+ str(round(New_Longitude_DD,4)),'|||', + str(round(New_Latitude_DD,4)))
 
 def DD2DMS(para_DD):
     List_Temp_1 = math.modf(para_DD)
