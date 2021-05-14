@@ -43,30 +43,16 @@ def Modify_Phote_Coordinate():
         random_num = random.randint(1,9)/100000
         for photo_name in box_info['Box_Photos']:
             Obj_img = pyexiv2.Image(photo_name, 'gb2312')
-
             Exif_Data = Obj_img.read_exif()
-            try:
-                Origin_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
-                Origin_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
-                Origin_Longitude_DD = DMS2DD(Origin_Longitude)
-                Origin_Latitude_DD = DMS2DD(Origin_Latitude)
-            except:
-                ...
-            finally:
-                Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']) + random_num)}
-                Obj_img.modify_exif(Dic_New_Coordinate)
-                Exif_Data = Obj_img.read_exif()
-                New_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
-                New_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
-                New_Longitude_DD = DMS2DD(New_Longitude)
-                New_Latitude_DD = DMS2DD(New_Latitude)
-
-                Obj_img.close()
-            
-            try:
-                print(photo_name,r'原坐标/新坐标:',str(round(Origin_Longitude_DD,4)) + r'/' + str(round(New_Longitude_DD,4)),'|||',str(round(Origin_Latitude_DD,4)) + r'/'+str(round(New_Latitude_DD,4)))
-            except:
-                print(photo_name,'新坐标:'+ str(round(New_Longitude_DD,4)),'|||', + str(round(New_Latitude_DD,4)))
+            Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitudeRef': 'N', 'Exif.GPSInfo.GPSLongitudeRef': 'E', }
+            Obj_img.modify_exif(Dic_New_Coordinate)
+            Exif_Data = Obj_img.read_exif()
+            New_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
+            New_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
+            New_Longitude_DD = DMS2DD(New_Longitude)
+            New_Latitude_DD = DMS2DD(New_Latitude)
+            Obj_img.close()
+            print(photo_name,'新坐标:'+ str(round(New_Longitude_DD,4)) + '|||' + str(round(New_Latitude_DD,4)))
 
 def DD2DMS(para_DD):
     List_Temp_1 = math.modf(para_DD)
@@ -84,7 +70,7 @@ def DMS2DD(para_DMS):
     Dig_DD = List_Temp_2[0] + List_Temp_2[1] / 60 + List_Temp_2[2] / 3600
     return Dig_DD
 
-def Upload_Photo(Para_Box_Info):
+def Upload_Photo_SFB(Para_Box_Info):
 
     if (Para_Box_Info['ZH_LABEL'].find('GJ') != -1) or (Para_Box_Info['ZH_LABEL'].find('gj') != -1):
         resClassName = 'OPTI_TRAN_BOX'
@@ -94,6 +80,17 @@ def Upload_Photo(Para_Box_Info):
     for photo_name in Para_Box_Info['Box_Photos']:
         URL_Upload = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!sxUploadPhoto.action?objId=' + Para_Box_Info['INT_ID']
         files = {'file':(photo_name, open(photo_name, 'rb'),'image/pjpeg'), 'resClassName': (None, resClassName, None), ('file' + photo_name[-5:-4] + '_name'): (None, 'C:\\fakepath\\' + photo_name, None)}
+        Response_Body = requests.post(URL_Upload, files=files, cookies={'tsid': tsid_v, 'route': route_v})
+        print(photo_name, Response_Body.status_code)
+
+def Upload_Photo_OTB(Para_Box_Info): # 旧地址上传,不分类
+    if (Para_Box_Info['ZH_LABEL'].find('GJ') != -1) or (Para_Box_Info['ZH_LABEL'].find('gj') != -1):
+        resClassName = 'OPTI_TRAN_BOX'
+    else:
+        resClassName = 'OPTI_SFB'
+    for photo_name in Para_Box_Info['Box_Photos']:
+        URL_Upload = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!uploadPhoto.action?objId='+Para_Box_Info['INT_ID']+'&resClassName='+resClassName+'&extensionName='+photo_name[(len(photo_name)-3):len(photo_name)]
+        files = {'filename':(photo_name, open(photo_name, 'rb'),'image/pjpeg')}
         Response_Body = requests.post(URL_Upload, files=files, cookies={'tsid': tsid_v, 'route': route_v})
         print(photo_name, Response_Body.status_code)
 
@@ -159,4 +156,7 @@ if __name__ == '__main__':
     Query_tsid_and_route()
     for box_info in List_Box_Info:
         Clear_Photo(box_info)
-        Upload_Photo(box_info)
+        # if (box_info['ZH_LABEL'].find('GJ') != -1) or (box_info['ZH_LABEL'].find('gj') != -1):
+        Upload_Photo_SFB(box_info)
+        # else:
+        #     Upload_Photo_OTB(box_info)
