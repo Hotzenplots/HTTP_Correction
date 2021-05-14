@@ -25,7 +25,7 @@ import re
 处理自定义占用从0开始
 '''
 
-File_Name = ['太钢118']
+File_Name = ['煤海湾小区']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -816,6 +816,7 @@ def Query_CS_Fiber_IDs(Para_List_CS_Data):
 def Query_POS_ID(Para_List_Box_Data):
     URL_Query_POS_ID = 'http://10.209.199.72:7112/irms/opticOpenApplyAction!queryEqu.ilf'
     Form_Info_Encoded = 'equType=POS&countyId=' + str(Para_List_Box_Data['County_ID']) + '&siteId=' + str(Para_List_Box_Data['ResPoint_ID']) + '&sitetype=' + str(Para_List_Box_Data['ResPoint_Type_ID']) + '&sitename=' + parse.quote_plus(Para_List_Box_Data['ResPoint_Name']) + '&cityId=' + str(Para_List_Box_Data['City_ID'])
+    Form_Info_Encoded = 'limit=30' + '&equType=POS&countyId=' + str(Para_List_Box_Data['County_ID']) + '&siteId=' + str(Para_List_Box_Data['ResPoint_ID']) + '&sitetype=' + str(Para_List_Box_Data['ResPoint_Type_ID']) + '&sitename=' + parse.quote_plus(Para_List_Box_Data['ResPoint_Name']) + '&cityId=' + str(Para_List_Box_Data['City_ID'])
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
