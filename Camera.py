@@ -15,8 +15,6 @@ def Query_tsid_and_route():
     global route_v, tsid_v
     route_v = cookies['route']
     tsid_v = cookies['tsid']
-    print('route: ' + route_v)
-    print('tsid: ' + tsid_v)
 
 def Query_Box_Info(Para_Box_Name):
 
@@ -36,6 +34,9 @@ def Query_Box_Info(Para_Box_Name):
     List_Response_Key = Response_Body.xpath("//fv/@k")
     List_Response_Value = Response_Body.xpath("//fv/@v")
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
+    if len(Dic_Response) == 0:
+        print(Para_Box_Name,'名称有误')
+        exit()
     List_Box_Info.append(Dic_Response)
 
 def Modify_Phote_Coordinate():
@@ -43,16 +44,16 @@ def Modify_Phote_Coordinate():
         random_num = random.randint(1,9)/100000
         for photo_name in box_info['Box_Photos']:
             Obj_img = pyexiv2.Image(photo_name, 'gb2312')
-            Exif_Data = Obj_img.read_exif()
+            # Exif_Data = Obj_img.read_exif()
             Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitudeRef': 'N', 'Exif.GPSInfo.GPSLongitudeRef': 'E', }
             Obj_img.modify_exif(Dic_New_Coordinate)
-            Exif_Data = Obj_img.read_exif()
-            New_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
-            New_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
-            New_Longitude_DD = DMS2DD(New_Longitude)
-            New_Latitude_DD = DMS2DD(New_Latitude)
+            # Exif_Data = Obj_img.read_exif()
+            # New_Longitude = Exif_Data['Exif.GPSInfo.GPSLongitude']
+            # New_Latitude = Exif_Data['Exif.GPSInfo.GPSLatitude']
+            # New_Longitude_DD = DMS2DD(New_Longitude)
+            # New_Latitude_DD = DMS2DD(New_Latitude)
             Obj_img.close()
-            print(photo_name,'新坐标:'+ str(round(New_Longitude_DD,4)) + '|||' + str(round(New_Latitude_DD,4)))
+            # print(photo_name,'新坐标:'+ str(round(New_Longitude_DD,4)) + '|||' + str(round(New_Latitude_DD,4)))
 
 def DD2DMS(para_DD):
     List_Temp_1 = math.modf(para_DD)
@@ -81,18 +82,7 @@ def Upload_Photo_SFB(Para_Box_Info):
         URL_Upload = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!sxUploadPhoto.action?objId=' + Para_Box_Info['INT_ID']
         files = {'file':(photo_name, open(photo_name, 'rb'),'image/pjpeg'), 'resClassName': (None, resClassName, None), ('file' + photo_name[-5:-4] + '_name'): (None, 'C:\\fakepath\\' + photo_name, None)}
         Response_Body = requests.post(URL_Upload, files=files, cookies={'tsid': tsid_v, 'route': route_v})
-        print(photo_name, Response_Body.status_code)
-
-def Upload_Photo_OTB(Para_Box_Info): # 旧地址上传,不分类
-    if (Para_Box_Info['ZH_LABEL'].find('GJ') != -1) or (Para_Box_Info['ZH_LABEL'].find('gj') != -1):
-        resClassName = 'OPTI_TRAN_BOX'
-    else:
-        resClassName = 'OPTI_SFB'
-    for photo_name in Para_Box_Info['Box_Photos']:
-        URL_Upload = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!uploadPhoto.action?objId='+Para_Box_Info['INT_ID']+'&resClassName='+resClassName+'&extensionName='+photo_name[(len(photo_name)-3):len(photo_name)]
-        files = {'filename':(photo_name, open(photo_name, 'rb'),'image/pjpeg')}
-        Response_Body = requests.post(URL_Upload, files=files, cookies={'tsid': tsid_v, 'route': route_v})
-        print(photo_name, Response_Body.status_code)
+        List_Upload_State[photo_name] = Response_Body.status_code
 
 def Processing_Local_File():
     global List_Box_Info,List_Folder_File_List,List_Box_Name
@@ -107,6 +97,8 @@ def Processing_Local_File():
     List_Box_Name = list(Set_Box_Name)
 
 def Find_Photos():
+    global Photo_Count
+    Photo_Count = 0
     for box_info in List_Box_Info:
         List_Box_Photos = []
         for photo_name in List_Folder_File_List:
@@ -123,6 +115,7 @@ def Find_Photos():
             if (photo_name.find(box_info['ZH_LABEL']+'-F') != -1):
                 List_Box_Photos.append(photo_name)
         box_info['Box_Photos'] = List_Box_Photos
+        Photo_Count = Photo_Count + len(box_info['Box_Photos'])
 
 def Clear_Photo(Para_Box_Info):
 
@@ -137,26 +130,36 @@ def Clear_Photo(Para_Box_Info):
     List_Photo =  Response_Body.xpath("//img/@src")
     List_Photo.pop(0)
     if len(List_Photo) == 0:
-        print(Para_Box_Info['ZH_LABEL']+'无照片')
+        pass
     elif len(List_Photo) != 0:
         for photo_address in List_Photo:
             URL_Delete_Photo = 'http://10.231.251.132:7113/rmw/datamanage/resmaintain/resMaintainAction!detelePhoto.action?photoId='+photo_address[len(photo_address) - 6:len(photo_address)]+'&objId='+Para_Box_Info['INT_ID']+'&resClassName='+resClassName
             Response_Body = requests.get(URL_Delete_Photo, cookies={'tsid': tsid_v, 'route': route_v})
-        print(Para_Box_Info['ZH_LABEL']+'照片已清空')
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
         Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
 
 if __name__ == '__main__':
+    List_Upload_State = {'yyz':200}
     Processing_Local_File()
+    print('箱体总数:' + str(len(List_Box_Name)))
     Swimming_Pool(Query_Box_Info, List_Box_Name)
     Find_Photos()
+    print('照片总数:' +str(Photo_Count))
+    print('更新照片经纬度开始...')
     Modify_Phote_Coordinate()
+    print('更新照片经纬度结束!!!')
     Query_tsid_and_route()
+    print('上传开始...')
     for box_info in List_Box_Info:
         Clear_Photo(box_info)
-        # if (box_info['ZH_LABEL'].find('GJ') != -1) or (box_info['ZH_LABEL'].find('gj') != -1):
         Upload_Photo_SFB(box_info)
-        # else:
-        #     Upload_Photo_OTB(box_info)
+    print('上传结束!!!')
+    List_OK = 0
+    for each_name,each_code in List_Upload_State.items():
+        if each_code == 200:
+            List_OK += 1
+        elif each_code != 200:
+            print(each_name,each_code)
+    print('上传成功:'+ str(List_OK - 1) + '张')
