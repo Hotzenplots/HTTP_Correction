@@ -1,21 +1,20 @@
-import csv
-import math
-import requests
-import copy
-import json
-import datetime
 import base64
-from urllib import parse
-from lxml import etree
-from concurrent.futures import ThreadPoolExecutor
-from openpyxl import load_workbook
-from collections import Counter
-from Crypto.Cipher import AES
+import collections
+import datetime
+import concurrent.futures
+import copy
+import Crypto.Cipher.AES
+import csv
+import json
+import math
+import lxml
+import openpyxl
 import re
+import requests
+import urllib
 
 '''
 7013表考虑是否不精简
-优化from语句
 分光器中文名称末尾正则表达式
 
 数据完整性验(http返回状态统计,数据数量统计,SFB,OCS,)
@@ -28,7 +27,7 @@ import re
 File_Name = ['平舆小黑']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
-    with ThreadPoolExecutor(max_workers=10) as Pool_Executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as Pool_Executor:
         Pool_Executor.map(Para_Functional_Function,(Para_Some_Iterable_Obj))
 
 def Generate_Local_Data(Para_File_Name):
@@ -52,7 +51,7 @@ def Generate_Local_Data(Para_File_Name):
     Task_Name_ID_List = List_7013[1][5].split('-')
 
     '''读取并整理Sheet_Template,生成List_Template'''
-    WB_obj = load_workbook(Para_File_Name+'.xlsx')
+    WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx')
 
     WS_obj = WB_obj['Info']
     List_Template = []
@@ -538,7 +537,7 @@ def Generate_OC_POS_Data_and_OC_Name():
         each_oc_data['OC_Name'] = each_oc_data['A_Box_Name'] + '资源点' + '-' + each_oc_data['Z_Box_Name'] + '资源点' + 'F0001'
         List_OC_Name.append(each_oc_data['OC_Name'])
 
-    Counter_OC_Name = Counter()
+    Counter_OC_Name = collections.Counter()
     for oc_name in List_OC_Name:
         Counter_OC_Name[oc_name] += 1
 
@@ -554,7 +553,7 @@ def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
     Response_Body = requests.get(URL_Query_Project_Code_ID)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Key = Response_Body.xpath("//@name")
     List_Response_Value = Response_Body.xpath("//@value")
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
@@ -569,12 +568,12 @@ def Query_Project_Code_ID():
 def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     URL_Query_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
     Form_Info = '<request><query mc="'+Para_List_Box_Data['Box_Type']+'" ids="" where="1=1 AND ZH_LABEL LIKE \'%'+Para_List_Box_Data['Box_Name']+'%\'" returnfields="INT_ID,ZH_LABEL,STRUCTURE_ID,ALIAS"/></request>'
-    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded","Content-Length": Request_Lenth}
     Response_Body = requests.post(URL_Query_Box, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Key = Response_Body.xpath("//fv/@k")
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_Response_Value_tv = Response_Body.xpath("//fv/@tv")
@@ -615,23 +614,23 @@ def Query_Support_Sys_and_Cable_Sys():
     #Support_System
     URL_Query_SS_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGetPage'
     Form_Info = '<request><query mc="xitong" where="1=1 AND LINESEG_TYPE=\'9108\' AND ZH_LABEL LIKE \'%'+Support_Sys_Name+'%\'" returnfields="INT_ID,ZH_LABEL"/></request>'
-    Form_Info_Encoded = 'pageNum=1&'+'xml='+parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'pageNum=1&'+'xml='+urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_SS_ID, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_SS_Count = Response_Body.xpath('//@counts')
     if List_SS_Count[0] == '0':
         #Generate Support_Sys
         URL_Add_Support_Sys = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalSave'
         Form_Info = '<response mode="add"><mc type="xitong"><mo group="1"><fv k="SYSTEM_LEVEL" v="8"/><fv k="CITY_ID" v="'+str(List_CS_Data[0]['City_ID'])+'"/><fv k="STATUS" v="8"/><fv k="COUNTY_ID" v="'+str(List_CS_Data[0]['County_ID'])+'"/><fv k="LINESEG_TYPE" v="9108"/><fv k="ZH_LABEL" v="'+Support_Sys_Name+'"/><fv k="INT_ID" v="new-27991311"/></mo></mc></response>'
-        Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+        Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Add_Support_Sys, data=Form_Info_Encoded, headers=Request_Header)
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
-        Response_Body = etree.HTML(Response_Body)
+        Response_Body = lxml.etree.HTML(Response_Body)
         Support_Sys_ID = Response_Body.xpath('//@newid')
         Support_Sys_ID = Support_Sys_ID[0]
         for ocs_num in List_CS_Data:
@@ -649,24 +648,24 @@ def Query_Support_Sys_and_Cable_Sys():
     #Cable_System
     URL_Query_CS_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGetPage'
     Form_Info = '<request><query mc="guanglanxitong" where="1=1 AND ZH_LABEL LIKE \'%'+Cable_Sys_Name+'%\'" returnfields="INT_ID,ZH_LABEL"/></request>'
-    Form_Info_Encoded = 'pageNum=1&'+'xml='+parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'pageNum=1&'+'xml='+urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_CS_ID, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_CS_Count = Response_Body.xpath('//@counts')
     if List_CS_Count[0] == '0':
         #Generate Cable_Sys
         URL_Add_Cable_Sys = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalSave'
         Form_Info = '<response mode="add"><mc type="xitong"><mo group="1"><fv k="SYSTEM_LEVEL" v="8"/><fv k="CITY_ID" v="'+str(List_CS_Data[0]['City_ID'])+'"/><fv k="STATUS" v="8"/><fv k="COUNTY_ID" v="'+str(List_CS_Data[0]['County_ID'])+'"/><fv k="LINESEG_TYPE" v="9108"/><fv k="ZH_LABEL" v="'+Support_Sys_Name+'"/><fv k="INT_ID" v="new-27991311"/></mo></mc></response>'
         Form_Info = '<response mode="add"><mc type="guanglanxitong"><mo group="1"><fv k="SYSTEM_LEVEL" v="8"/><fv k="CITY_ID" v="'+str(List_CS_Data[0]['City_ID'])+'"/><fv k="STATUS" v="8"/><fv k="COUNTY_ID" v="'+str(List_CS_Data[0]['County_ID'])+'"/><fv k="ZH_LABEL" v="'+Cable_Sys_Name+'"/><fv k="INT_ID" v="new-27991311"/><fv k="OPT_TYPE" v="GYTA-12"/></mo></mc></response>'
-        Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+        Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Add_Cable_Sys, data=Form_Info_Encoded, headers=Request_Header)
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
-        Response_Body = etree.HTML(Response_Body)
+        Response_Body = lxml.etree.HTML(Response_Body)
         Cable_Sys_ID = Response_Body.xpath('//@newid')
         Cable_Sys_ID = Cable_Sys_ID[0]
         for ocs_num in List_CS_Data:
@@ -696,7 +695,7 @@ def Query_Run_Certification():
     print(Password_Run)
     Login_Password_byte = Password_Run.encode()
     Login_Password_byte = add_to_16(Password_Run)
-    Cipher = AES.new(Encrypt_key_byte, AES.MODE_CBC, Encrypt_iv_byte)
+    Cipher = Crypto.Cipher.AES.new(Encrypt_key_byte, Crypto.Cipher.AES.MODE_CBC, Encrypt_iv_byte)
     Encrypted_byte = Cipher.encrypt(Login_Password_byte)
     Encrypted_byte = base64.b64encode(Encrypted_byte)
     Encrypt_Password = Encrypted_byte.decode()
@@ -705,7 +704,7 @@ def Query_Run_Certification():
     Response_Body = session.post('http://portal.sx.cmcc/pkmslogin.form?uid=' + Username_Run,data= {'login-form-type':'pwd','username':Username_Run,'password':Encrypt_Password})
     Response_Body = session.post('http://portal.sx.cmcc/sxmcc_wcm/middelwebpage/encryptportallogin/encryptlogin.jsp?appurl=http://10.209.199.72:7112/irms/sso.action')
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_userdt_ipaddress = Response_Body.xpath('//@value')
     Response_Body = requests.post('http://10.209.199.72:7112/irms/sso.action',data={'userdt': List_userdt_ipaddress[0], 'ipAddress': List_userdt_ipaddress[1]})
     cookies = requests.utils.dict_from_cookiejar(Response_Body.cookies)
@@ -730,7 +729,7 @@ def Query_Create_Certification():
     print(Password_Create)
     Login_Password_byte = Password_Create.encode()
     Login_Password_byte = add_to_16(Password_Create)
-    Cipher = AES.new(Encrypt_key_byte, AES.MODE_CBC, Encrypt_iv_byte)
+    Cipher = Crypto.Cipher.AES.new(Encrypt_key_byte, Crypto.Cipher.AES.MODE_CBC, Encrypt_iv_byte)
     Encrypted_byte = Cipher.encrypt(Login_Password_byte)
     Encrypted_byte = base64.b64encode(Encrypted_byte)
     Encrypt_Password = Encrypted_byte.decode()
@@ -739,7 +738,7 @@ def Query_Create_Certification():
     Response_Body = session.post('http://portal.sx.cmcc/pkmslogin.form?uid=' + Username_Create,data= {'login-form-type':'pwd','username':Username_Create,'password':Encrypt_Password})
     Response_Body = session.post('http://portal.sx.cmcc/sxmcc_wcm/middelwebpage/encryptportallogin/encryptlogin.jsp?appurl=http://10.209.199.72:7112/irms/sso.action')
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_userdt_ipaddress = Response_Body.xpath('//@value')
     Response_Body = requests.post('http://10.209.199.72:7112/irms/sso.action',data={'userdt': List_userdt_ipaddress[0], 'ipAddress': List_userdt_ipaddress[1]})
     cookies = requests.utils.dict_from_cookiejar(Response_Body.cookies)
@@ -754,23 +753,23 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     URL_Query_Support_Seg_ID_Cable_Seg_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
 
     Form_Info = '<request><query mc="yinshangduan" where="1=1 AND ZH_LABEL LIKE \'%'+str(Para_List_CS_Data['A_Box_Name'])+'资源点-'+str(Para_List_CS_Data['Z_Box_Name'])+'资源点'+'%\'" returnfields="INT_ID,ZH_LABEL"/></request>'
-    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded","Content-Length": Request_Lenth}
     Response_Body = requests.post(URL_Query_Support_Seg_ID_Cable_Seg_ID, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_Name'] = List_Response_Value[1]
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_ID'] = List_Response_Value[0]
 
     Form_Info = '<request><query mc="guanglanduan" where="1=1 AND ZH_LABEL LIKE \'%'+str(Para_List_CS_Data['A_Box_Name'])+'资源点-'+str(Para_List_CS_Data['Z_Box_Name'])+'资源点'+'%\'" returnfields="INT_ID,ZH_LABEL"/></request>'
-    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded","Content-Length": Request_Lenth}
     Response_Body = requests.post(URL_Query_Support_Seg_ID_Cable_Seg_ID, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_Name'] = List_Response_Value[1]
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID'] = List_Response_Value[0]
@@ -789,12 +788,12 @@ def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
         Para_List_Box_Data['Box_Type_Short'] = 'gjjx'
     Form_Info = '<params><param key="type" value="'+Para_List_Box_Data['Box_Type_Short']+'"/><param key="rack_id" value="'+Para_List_Box_Data['Box_ID']+'"/></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + parse.quote_plus(Form_Info_Tail)
+    Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_ODM_ID_and_Terminarl_IDs, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = urllib.parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Terminal_IDs = Response_Body.xpath('//@id')
     List_Terminal_IDs.pop(0)
     Para_List_Box_Data['ODM_ID'] = List_Terminal_IDs.pop(0)
@@ -804,19 +803,19 @@ def Query_CS_Fiber_IDs(Para_List_CS_Data):
     URL_Query_CS_Fiber_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
     Form_Info = '<params><param key="equ_type" value="fiberseg"/><param key="equ_id" value="'+Para_List_CS_Data['Cable_Seg_ID']+'"/></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&lifeparams=" + parse.quote_plus(Form_Info_Tail)
+    Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_CS_Fiber_IDs, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_CS_Fiber_IDs = Response_Body.xpath('//@id')
     List_CS_Fiber_IDs.pop(0)
     Para_List_CS_Data['CS_Fiber_IDs'] = List_CS_Fiber_IDs
 
 def Query_POS_ID(Para_List_Box_Data):
     URL_Query_POS_ID = 'http://10.209.199.72:7112/irms/opticOpenApplyAction!queryEqu.ilf'
-    Form_Info_Encoded = 'limit=30' + '&equType=POS&countyId=' + str(Para_List_Box_Data['County_ID']) + '&siteId=' + str(Para_List_Box_Data['ResPoint_ID']) + '&sitetype=' + str(Para_List_Box_Data['ResPoint_Type_ID']) + '&sitename=' + parse.quote_plus(Para_List_Box_Data['ResPoint_Name']) + '&cityId=' + str(Para_List_Box_Data['City_ID'])
+    Form_Info_Encoded = 'limit=30' + '&equType=POS&countyId=' + str(Para_List_Box_Data['County_ID']) + '&siteId=' + str(Para_List_Box_Data['ResPoint_ID']) + '&sitetype=' + str(Para_List_Box_Data['ResPoint_Type_ID']) + '&sitename=' + urllib.parse.quote_plus(Para_List_Box_Data['ResPoint_Name']) + '&cityId=' + str(Para_List_Box_Data['City_ID'])
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_POS_ID, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
@@ -845,12 +844,12 @@ def Query_POS_Port_IDs(Para_List_Box_Data):
         URL_Query_POS_Port_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
         Form_Info = '<params><param key="equ_type" value="pos"/><param key="equ_id" value="'+str(valuevalue)+'"/></params>'
         Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-        Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&lifeparams=" + parse.quote_plus(Form_Info_Tail)
+        Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Query_POS_Port_IDs, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
-        Response_Body = etree.HTML(Response_Body)
+        Response_Body = lxml.etree.HTML(Response_Body)
         List_POS_Port_IDs = Response_Body.xpath('//@id')
         List_POS_Port_IDs.pop(0)
         List_POS_Port_Names = Response_Body.xpath('//@name')
@@ -883,7 +882,7 @@ def Query_Optical_Route_Sheet_ID():
         Work_Sheet_Times.append((datetime.datetime.now() + datetime.timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S'))
         Work_Sheet_Times.append((datetime.datetime.now() + datetime.timedelta(days=6)).strftime('%Y-%m-%d %H:%M:%S'))
         URL_Query_Work_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
-        Form_Info_Encoded = 'processinstname=' + parse.quote_plus(Work_Sheet_Name)
+        Form_Info_Encoded = 'processinstname=' + urllib.parse.quote_plus(Work_Sheet_Name)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Query_Work_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
@@ -894,10 +893,10 @@ def Query_Optical_Route_Sheet_ID():
             URL_Create_New_Work_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/opticalSchedulingAction!init.ilf'
             Response_Body = requests.get(URL_Create_New_Work_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
             Response_Body = bytes(Response_Body.text, encoding="utf-8")
-            Response_Body = etree.HTML(Response_Body)
+            Response_Body = lxml.etree.HTML(Response_Body)
             List_Work_Sheet_Info = Response_Body.xpath('//input/@value')
             URL_Create_New_Work_Sheet_Step_2 = 'http://10.209.199.72:7112/irms/opticalSchedulingAction!submit.ilf?needSh=false'
-            Form_Info_Encoded = 'ownerId=' + List_Work_Sheet_Info[1] + '&deptId=' + List_Work_Sheet_Info[2] + '&flowId=' + List_Work_Sheet_Info[3] + '&companyName=' + parse.quote_plus(List_Work_Sheet_Info[7]) + '&companyId=' + List_Work_Sheet_Info[8] + '&workitemId=' + List_Work_Sheet_Info[10] + '&activeName=' + List_Work_Sheet_Info[14] + '&formNo=' + List_Work_Sheet_Info[15] + '&title=' + parse.quote_plus(Work_Sheet_Name) + '&startFlag=' + List_Work_Sheet_Info[19] + '&ownerName=' + parse.quote_plus(List_Work_Sheet_Info[21]) + '&cellPhone=' +List_Work_Sheet_Info[22] + '&deptName=' + parse.quote_plus(List_Work_Sheet_Info[23]) + '&startTime=' + parse.quote_plus(Work_Sheet_Times[0]) + '&acceptTime=' + parse.quote_plus(Work_Sheet_Times[1]) + '&replyTime=' + parse.quote_plus(Work_Sheet_Times[2]) + '&requestTime=' + parse.quote_plus(Work_Sheet_Times[3]) + '&urgentDegree=' + parse.quote_plus('一般') + '&schedulingReason='
+            Form_Info_Encoded = 'ownerId=' + List_Work_Sheet_Info[1] + '&deptId=' + List_Work_Sheet_Info[2] + '&flowId=' + List_Work_Sheet_Info[3] + '&companyName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[7]) + '&companyId=' + List_Work_Sheet_Info[8] + '&workitemId=' + List_Work_Sheet_Info[10] + '&activeName=' + List_Work_Sheet_Info[14] + '&formNo=' + List_Work_Sheet_Info[15] + '&title=' + urllib.parse.quote_plus(Work_Sheet_Name) + '&startFlag=' + List_Work_Sheet_Info[19] + '&ownerName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[21]) + '&cellPhone=' +List_Work_Sheet_Info[22] + '&deptName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[23]) + '&startTime=' + urllib.parse.quote_plus(Work_Sheet_Times[0]) + '&acceptTime=' + urllib.parse.quote_plus(Work_Sheet_Times[1]) + '&replyTime=' + urllib.parse.quote_plus(Work_Sheet_Times[2]) + '&requestTime=' + urllib.parse.quote_plus(Work_Sheet_Times[3]) + '&urgentDegree=' + urllib.parse.quote_plus('一般') + '&schedulingReason='
             Request_Lenth = str(len(Form_Info_Encoded))
             Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
             Response_Body = requests.post(URL_Create_New_Work_Sheet_Step_2, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
@@ -926,7 +925,7 @@ def Query_Integrate_Sheet_ID():
 
     Integrate_Sheet_Name = '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请'
     URL_Query_Integrate_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
-    Form_Info_Encoded = 'processinstname=' + parse.quote_plus(Integrate_Sheet_Name)
+    Form_Info_Encoded = 'processinstname=' + urllib.parse.quote_plus(Integrate_Sheet_Name)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Query_Integrate_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
@@ -947,13 +946,13 @@ def Query_Integrate_Sheet_ID():
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded'}
         Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_2, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
-        Response_Body = etree.HTML(Response_Body)
+        Response_Body = lxml.etree.HTML(Response_Body)
         List_Integrate_Sheet_Key = Response_Body.xpath('//input/@name')
         List_Integrate_Sheet_Value = Response_Body.xpath('//input/@value')
         Dic_Integrate_Sheet_Info = dict(zip(List_Integrate_Sheet_Key, List_Integrate_Sheet_Value))
 
         URL_Create_Integrate_Sheet_Step_3 = 'http://10.209.199.72:7112/irms/pipelineresInAction!saveDraft.ilf'
-        Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + '&pid=' + '&toppid=' + '&companyName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + parse.quote_plus(List_7013[1][5]) + '&remark='
+        Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + '&pid=' + '&toppid=' + '&companyName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + urllib.parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + urllib.parse.quote_plus(List_7013[1][5]) + '&remark='
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Create_Integrate_Sheet_Step_3, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
@@ -962,13 +961,13 @@ def Query_Integrate_Sheet_ID():
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded'}
         Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_4, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
-        Response_Body = etree.HTML(Response_Body)
+        Response_Body = lxml.etree.HTML(Response_Body)
         List_Integrate_Sheet_Key = Response_Body.xpath('//input/@name')
         List_Integrate_Sheet_Value = Response_Body.xpath('//input/@value')
         Dic_Integrate_Sheet_Info = dict(zip(List_Integrate_Sheet_Key, List_Integrate_Sheet_Value))
 
         URL_Create_Integrate_Sheet_Step_5 = 'http://10.209.199.72:7112/irms/pipelineresInAction!submit.ilf'
-        Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + str(Dic_Integrate_Sheet_Info['id']) + '&pid=' + '&toppid=' + '&companyName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + parse.quote_plus(List_7013[1][5]) + '&remark='
+        Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + str(Dic_Integrate_Sheet_Info['id']) + '&pid=' + '&toppid=' + '&companyName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + urllib.parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + urllib.parse.quote_plus(List_7013[1][5]) + '&remark='
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Create_Integrate_Sheet_Step_5, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
@@ -977,8 +976,8 @@ def Query_Integrate_Sheet_ID():
 
     elif Response_Body['totalCount'] != 0:
         print(Integrate_Sheet_Name, "工单编号", Response_Body['root'][0]['PROCESSINSTID'])
-        for each_oc_data in List_OC_Data:
-            each_oc_data['Pro_ID'] = Response_Body['root'][0]['PROCESSINSTID']
+        for each_cs_data in List_CS_Data:
+            each_cs_data['Pro_ID'] = Response_Body['root'][0]['PROCESSINSTID']
 
 def Query_OC_Int_ID():
     List_Pro_ID = []
@@ -1012,12 +1011,12 @@ def Execute_Push_Box():
         List_Form_Info_Body.append(Form_Info_Body)
     Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
-    Form_Info_Encoded = 'xml=' + parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'xml=' + urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Push_Box, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     Push_Result = Response_Body.xpath('//@loaded')
     print('P1-推箱子-{}'.format(Push_Result[0]))
 
@@ -1031,12 +1030,12 @@ def Execute_Generate_Support_Segment():
         List_Form_Info_Body.append(Form_Info_Body)
     Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
-    Form_Info_Encoded = 'empname=' + parse.quote_plus('白云鹏') + '&xml=' + parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'empname=' + urllib.parse.quote_plus('白云鹏') + '&xml=' + urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Generate_Support_Segment, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Generate_Support_Segment_State = Response_Body.xpath('//@loaded')
     print('P2-引上段建立-{}'.format(List_Generate_Support_Segment_State[0]))
 
@@ -1050,24 +1049,24 @@ def Execute_Generate_Cable_Segment():
         List_Form_Info_Body.append(Form_Info_Body)
     Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
-    Form_Info_Encoded = 'empname=' + parse.quote_plus('白云鹏') + '&xml=' + parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'empname=' + urllib.parse.quote_plus('白云鹏') + '&xml=' + urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Generate_Cable_Segment, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Generate_Cable_Segment_State = Response_Body.xpath('//@loaded')
     print('P3-光缆段建立-{}'.format(List_Generate_Cable_Segment_State[0]))
 
 def Execute_Cable_Lay(Para_List_CS_Data):
     URL_Cable_Lay = 'http://10.209.199.74:8120/igisserver_osl/rest/optCabLayInspur/saveFiberSegM1'
     Form_Info = '<xmldata><fiberseg id="'+str(Para_List_CS_Data['Cable_Seg_ID'])+'" aid="'+str(Para_List_CS_Data['A_ResPoint_ID'])+'" zid="'+str(Para_List_CS_Data['Z_ResPoint_ID'])+'"/><cablays><cablay id="'+str(Para_List_CS_Data['Support_Seg_ID'])+'" type="yinshangduan" name="'+str(Para_List_CS_Data['Support_Seg_Name'])+'" aid="'+str(Para_List_CS_Data['A_ResPoint_ID'])+'" zid="'+str(Para_List_CS_Data['Z_ResPoint_ID'])+'"/></cablays></xmldata>'
-    Form_Info_Encoded = 'xml='+parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Cable_Lay, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Cable_Lay_State = Response_Body.xpath('//@msg')
     print('P4-敷设-{}-{}'.format(List_Cable_Lay_State[0], Para_List_CS_Data['Cable_Seg_Name']))
 
@@ -1075,12 +1074,12 @@ def Execute_Generate_ODM(Para_List_Box_Data):
     URL_Generate_ODM = 'http://10.209.199.74:8120/nxapp/room/editODMData.ilf'
     Form_Info = '<params><odm id="" rowflag="+" rownum="1" colflag="+" colnum="12"><attribute module_rowno="1" rowno="'+str(Para_List_Box_Data['ODM_Rows'])+'" columnno="12" terminal_arr="0" maintain_county="'+str(Para_List_Box_Data['County_ID'])+'" maintain_city="'+str(Para_List_Box_Data['City_ID'])+'" structure_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" structure_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" related_rack="'+str(Para_List_Box_Data['Box_ID'])+'" related_type="'+str(Para_List_Box_Data['Box_Type_ID'])+'" status="8" model="odm"/></odm></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + parse.quote_plus(Form_Info_Tail)
+    Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Generate_ODM, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = urllib.parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_ODM_ID = Response_Body.xpath('//@int_id')
     Para_List_Box_Data['ODM_ID'] = List_ODM_ID[0]
     print('P5-ODM-{}-in-{}'.format(List_ODM_ID[0], Para_List_Box_Data['Box_Name']))
@@ -1089,12 +1088,12 @@ def Execute_Generate_Tray(Para_List_Box_Data):
     URL_Generate_Tray = "http://10.209.199.74:8120/nxapp/room/editTray_sx.ilf"
     Form_Info = '<params model="tray"><obj related_rack="'+str(Para_List_Box_Data['Box_ID'])+'" related_type="'+str(Para_List_Box_Data['Box_Type_ID'])+'" structure_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" structure_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" deviceshelf_id="'+str(Para_List_Box_Data['ODM_ID'])+'" tray_no="1" tray_num="'+str(Para_List_Box_Data['Tray_Count'])+'" row_count="1" col_count="12" int_id=""/></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = "params=" + parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + parse.quote_plus(Form_Info_Tail)
+    Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Generate_Tray, data=Form_Info_Encoded, headers=Request_Header)
-    Response_Body = parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = urllib.parse.unquote(bytes(Response_Body.text, encoding="utf-8"))
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Terminal_IDs = Response_Body.xpath('//terminal//@int_id')
     print('P6-Terminal_IDs_Count-{}-{}'.format(len(List_Terminal_IDs), Para_List_Box_Data['Box_Name']))
     Para_List_Box_Data['Terminal_IDs'] = List_Terminal_IDs
@@ -1119,12 +1118,12 @@ def Execute_Termination(Para_List_Box_Data):
     Form_Info_Head = '<params>'
     Form_Info_Butt = '</params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
+    Form_Info_Encoded = 'params=' + urllib.parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Termination, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Termination_State = Response_Body.xpath('//@msg')
     print('P7-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
@@ -1147,12 +1146,12 @@ def Execute_Direct_Melt(Para_List_Box_Data):
         Form_Info_Body = ''.join(each_direct_melt_datas)
         Form_Info_Butt = '</params>'
         Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-        Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
+        Form_Info_Encoded = 'params=' + urllib.parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + urllib.parse.quote_plus(Form_Info_Tail)
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
         Response_Body = requests.post(URL_Direct_Melt, data=Form_Info_Encoded, headers=Request_Header)
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
-        Response_Body = etree.HTML(Response_Body)
+        Response_Body = lxml.etree.HTML(Response_Body)
         List_Direct_Melt_State = Response_Body.xpath('//@msg')
         print('P8-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Direct_Melt_State[0]))
 
@@ -1161,7 +1160,7 @@ def Execute_Direct_Melt(Para_List_Box_Data):
 
 def Execute_Generate_Optical_Circut(Para_List_OC_Data):
     URL_Generate_Optical_Circut = 'http://10.209.199.72:7112/irms/opticOpenAction!saveOptictemp.ilf'
-    Form_Info_Encoded = 'proId=' + str(Para_List_OC_Data['Pro_ID']) + '&cityId=' + str(Para_List_OC_Data['City_ID']) + '&countyId=' + str(Para_List_OC_Data['County_ID']) + '&aportequname=' + parse.quote_plus(Para_List_OC_Data['A_Box_Name']) + '&aportequtype=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&aportequid=' + str(Para_List_OC_Data['A_Box_ID']) + '&asitename=' + parse.quote_plus(Para_List_OC_Data['A_ResPoint_Name']) + '&asitetype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '&asiteid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&aequname=' + parse.quote_plus(Para_List_OC_Data['A_POS_Name']) + '&aequid=' + str(Para_List_OC_Data['A_POS_ID']) + '&aequtype=' + str(Para_List_OC_Data['AEquType']) + '&ajoinName=' + parse.quote_plus(Para_List_OC_Data['AJoinName']) + '&zportequname=' + parse.quote_plus(Para_List_OC_Data['Z_Box_Name']) + '&zportequtype=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&zportequid=' + str(Para_List_OC_Data['Z_Box_ID']) + '&zsitename=' + parse.quote_plus(Para_List_OC_Data['Z_ResPoint_Name']) + '&zsitetype=' + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&zsiteid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&zequname=' + parse.quote_plus(Para_List_OC_Data['Z_POS_Name']) + '&zequid=' + str(Para_List_OC_Data['Z_POS_ID']) + '&zequtype=' + str(Para_List_OC_Data['ZEquType']) + '&zjoinName=' + parse.quote_plus(Para_List_OC_Data['ZJoinName']) + '&opticname=' + parse.quote_plus(Para_List_OC_Data['OC_Name']) + '&chengzaiyewu=' + parse.quote_plus(Para_List_OC_Data['Business_Name']) + '&sxbusstype=' + parse.quote_plus(Para_List_OC_Data['SXBussType']) + '&bakinfo=' + parse.quote_plus('无') + '&bussType=' + str(Para_List_OC_Data['BussType']) + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&serviceLevel=' + str(Para_List_OC_Data['ServiceLevel']) + '&fiberCount=' + str(Para_List_OC_Data['FiberCount']) + '&qualityGc=' + parse.quote_plus(Para_List_OC_Data['DQS_Project']) + '&qualityGcId=' + str(Para_List_OC_Data['DQS_Project_ID']) + '&qualityDs=' + parse.quote_plus(Para_List_OC_Data['DQS']) + '&qualityDsId=' + str(Para_List_OC_Data['DQS_ID']) + '&qualityQx=' + parse.quote_plus(Para_List_OC_Data['DQS_County']) + '&qualityQxId=' + str(Para_List_OC_Data['DQS_County_ID']) + '&maintain=' + parse.quote_plus(Para_List_OC_Data['DQS_Maintainer']) + '&maintainId=' + str(Para_List_OC_Data['DQS_Maintainer_ID']) + '&projectCodeName=' + parse.quote_plus(Para_List_OC_Data['Project_Code']) + '&projectCodeId=' + str(Para_List_OC_Data['Project_Code_ID']) + '&taskName=' + parse.quote_plus(Para_List_OC_Data['Task_Name']) + '&taskNameid=' + str(Para_List_OC_Data['Task_Name_ID'])
+    Form_Info_Encoded = 'proId=' + str(Para_List_OC_Data['Pro_ID']) + '&cityId=' + str(Para_List_OC_Data['City_ID']) + '&countyId=' + str(Para_List_OC_Data['County_ID']) + '&aportequname=' + urllib.parse.quote_plus(Para_List_OC_Data['A_Box_Name']) + '&aportequtype=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&aportequid=' + str(Para_List_OC_Data['A_Box_ID']) + '&asitename=' + urllib.parse.quote_plus(Para_List_OC_Data['A_ResPoint_Name']) + '&asitetype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '&asiteid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&aequname=' + urllib.parse.quote_plus(Para_List_OC_Data['A_POS_Name']) + '&aequid=' + str(Para_List_OC_Data['A_POS_ID']) + '&aequtype=' + str(Para_List_OC_Data['AEquType']) + '&ajoinName=' + urllib.parse.quote_plus(Para_List_OC_Data['AJoinName']) + '&zportequname=' + urllib.parse.quote_plus(Para_List_OC_Data['Z_Box_Name']) + '&zportequtype=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&zportequid=' + str(Para_List_OC_Data['Z_Box_ID']) + '&zsitename=' + urllib.parse.quote_plus(Para_List_OC_Data['Z_ResPoint_Name']) + '&zsitetype=' + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&zsiteid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&zequname=' + urllib.parse.quote_plus(Para_List_OC_Data['Z_POS_Name']) + '&zequid=' + str(Para_List_OC_Data['Z_POS_ID']) + '&zequtype=' + str(Para_List_OC_Data['ZEquType']) + '&zjoinName=' + urllib.parse.quote_plus(Para_List_OC_Data['ZJoinName']) + '&opticname=' + urllib.parse.quote_plus(Para_List_OC_Data['OC_Name']) + '&chengzaiyewu=' + urllib.parse.quote_plus(Para_List_OC_Data['Business_Name']) + '&sxbusstype=' + urllib.parse.quote_plus(Para_List_OC_Data['SXBussType']) + '&bakinfo=' + urllib.parse.quote_plus('无') + '&bussType=' + str(Para_List_OC_Data['BussType']) + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&serviceLevel=' + str(Para_List_OC_Data['ServiceLevel']) + '&fiberCount=' + str(Para_List_OC_Data['FiberCount']) + '&qualityGc=' + urllib.parse.quote_plus(Para_List_OC_Data['DQS_Project']) + '&qualityGcId=' + str(Para_List_OC_Data['DQS_Project_ID']) + '&qualityDs=' + urllib.parse.quote_plus(Para_List_OC_Data['DQS']) + '&qualityDsId=' + str(Para_List_OC_Data['DQS_ID']) + '&qualityQx=' + urllib.parse.quote_plus(Para_List_OC_Data['DQS_County']) + '&qualityQxId=' + str(Para_List_OC_Data['DQS_County_ID']) + '&maintain=' + urllib.parse.quote_plus(Para_List_OC_Data['DQS_Maintainer']) + '&maintainId=' + str(Para_List_OC_Data['DQS_Maintainer_ID']) + '&projectCodeName=' + urllib.parse.quote_plus(Para_List_OC_Data['Project_Code']) + '&projectCodeId=' + str(Para_List_OC_Data['Project_Code_ID']) + '&taskName=' + urllib.parse.quote_plus(Para_List_OC_Data['Task_Name']) + '&taskNameid=' + str(Para_List_OC_Data['Task_Name_ID'])
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Generate_Optical_Circut, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
@@ -1186,7 +1185,7 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
         URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
         Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        Response_Body = etree.HTML(Response_Body.text)
+        Response_Body = lxml.etree.HTML(Response_Body.text)
 
         # 处理重复通路的系统bug开始
         List_Path_IDs = Response_Body.xpath('//line/@id')
@@ -1201,7 +1200,7 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
         URL_Occupy_Path = URL_Occupy_Path + Query_Detail
         Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        Response_Body = etree.HTML(Response_Body.text)
+        Response_Body = lxml.etree.HTML(Response_Body.text)
         Occupy_Result = Response_Body.xpath('//@success')
 
         print('P10通路占用-{}-{}'.format(Occupy_Result[0], Para_List_OC_Data['OC_Name']))
@@ -1209,7 +1208,7 @@ def Execute_Transmission_Design(Para_List_OC_Data):
 
         # 端口配置开始
         URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!updateworkernew.ilf'
-        Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + "&zobjecttype=" + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(str(Para_List_OC_Data['A_ResPoint_Name'])) + '&zobjectname=' + parse.quote_plus(str(Para_List_OC_Data['Z_ResPoint_Name'])) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + "&zneid=" + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(str(Para_List_OC_Data['A_POS_Name'])) + '&znename=' + parse.quote_plus(str(Para_List_OC_Data['Z_POS_Name'])) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(str(Para_List_OC_Data['A_Port_Name'])) + '&zportname=' + parse.quote_plus(str(Para_List_OC_Data['Z_Port_Name'])) + '&isgenerateFiber=' + '1' + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + "&znetype=" + str(Para_List_OC_Data['ZEquType'])
+        Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + "&zobjecttype=" + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + urllib.parse.quote_plus(str(Para_List_OC_Data['A_ResPoint_Name'])) + '&zobjectname=' + urllib.parse.quote_plus(str(Para_List_OC_Data['Z_ResPoint_Name'])) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + "&zneid=" + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + urllib.parse.quote_plus(str(Para_List_OC_Data['A_POS_Name'])) + '&znename=' + urllib.parse.quote_plus(str(Para_List_OC_Data['Z_POS_Name'])) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + urllib.parse.quote_plus(str(Para_List_OC_Data['A_Port_Name'])) + '&zportname=' + urllib.parse.quote_plus(str(Para_List_OC_Data['Z_Port_Name'])) + '&isgenerateFiber=' + '1' + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + "&znetype=" + str(Para_List_OC_Data['ZEquType'])
         Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
         Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=Form_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = Response_Body.text
@@ -1230,18 +1229,18 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         URL_Save_Jumper = 'http://10.209.199.74:8120/igisserver_osl/rest/jumperandfiber/saveJumper'
         Form_Info_1 = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
         Form_Info_2 = '<params><param a_site_type="' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '" a_site_id="' + str(Para_List_OC_Data['A_ResPoint_ID']) + '" a_equ_type="pos" a_equ_id="' + str(Para_List_OC_Data['A_POS_ID']) + '" a_port_type="pos_port" a_port_id="' + str(Para_List_OC_Data['A_Port_ID']) + '" z_site_type="'+ str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '" z_site_id="' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '" z_equ_type="pos" z_equ_id="' + str(Para_List_OC_Data['Z_POS_ID']) + '" z_port_type="pos_port" z_port_id="' + str(Para_List_OC_Data['Z_Port_ID']) + '"/></params>'
-        Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_2) + '&lifeparams=' + parse.quote_plus(Form_Info_1)
+        Form_Info_Encoded = 'params=' + urllib.parse.quote_plus(Form_Info_2) + '&lifeparams=' + urllib.parse.quote_plus(Form_Info_1)
         Request_Header = {"Host":"10.209.199.74:8120","Content-Type":"application/x-www-form-urlencoded"}
         Response_Body = requests.post(URL_Save_Jumper, headers=Request_Header, data=Form_Info_Encoded)
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
-        Response_Body = etree.HTML(Response_Body)
+        Response_Body = lxml.etree.HTML(Response_Body)
         List_Jumper_State = Response_Body.xpath('//@msg')
         print('P10跳纤-{}-{}'.format(List_Jumper_State[0], Para_List_OC_Data['OC_Name']))
         # 跳纤结束
 
         # 端口配置开始
         URL_Port_Config = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!saveweixianpeizhi.ilf'
-        Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID'])+'&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '&zobjecttype=' + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + parse.quote_plus(Para_List_OC_Data['A_ResPoint_Name']) + '&zobjectname=' + parse.quote_plus(Para_List_OC_Data['Z_ResPoint_Name']) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + '&zneid=' + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + parse.quote_plus(Para_List_OC_Data['A_POS_Name']) + '&znename=' + parse.quote_plus(Para_List_OC_Data['Z_POS_Name']) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + parse.quote_plus(Para_List_OC_Data['A_Port_Name']) + '&zportname=' + parse.quote_plus(Para_List_OC_Data['Z_Port_Name']) + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + '&znetype=' + str(Para_List_OC_Data['ZEquType']) + '&fibercount=' + '1'
+        Form_Info_Encoded = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID'])+'&aobjecttype=' + str(Para_List_OC_Data['A_ResPoint_Type_ID']) + '&zobjecttype=' + str(Para_List_OC_Data['Z_ResPoint_Type_ID']) + '&aobjectid=' + str(Para_List_OC_Data['A_ResPoint_ID']) + '&zobjectid=' + str(Para_List_OC_Data['Z_ResPoint_ID']) + '&aobjectname=' + urllib.parse.quote_plus(Para_List_OC_Data['A_ResPoint_Name']) + '&zobjectname=' + urllib.parse.quote_plus(Para_List_OC_Data['Z_ResPoint_Name']) + '&aneid=' + str(Para_List_OC_Data['A_POS_ID']) + '&zneid=' + str(Para_List_OC_Data['Z_POS_ID']) + '&anename=' + urllib.parse.quote_plus(Para_List_OC_Data['A_POS_Name']) + '&znename=' + urllib.parse.quote_plus(Para_List_OC_Data['Z_POS_Name']) + '&aportid=' + str(Para_List_OC_Data['A_Port_ID']) + '&zportid=' + str(Para_List_OC_Data['Z_Port_ID']) + '&aportname=' + urllib.parse.quote_plus(Para_List_OC_Data['A_Port_Name']) + '&zportname=' + urllib.parse.quote_plus(Para_List_OC_Data['Z_Port_Name']) + '&apptype=' + str(Para_List_OC_Data['AppType']) + '&anetype=' + str(Para_List_OC_Data['AEquType']) + '&znetype=' + str(Para_List_OC_Data['ZEquType']) + '&fibercount=' + '1'
         Request_Header = {"Host":"10.209.199.72:7112","Content-Type":"application/x-www-form-urlencoded"}
         Response_Body = requests.post(URL_Port_Config,headers = Request_Header, data=Form_Info_Encoded, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = Response_Body.text
@@ -1270,35 +1269,35 @@ def Execute_Termination_2nd(Para_List_Box_Data):
     Form_Info_Head = '<params>'
     Form_Info_Butt = '</params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
-    Form_Info_Encoded = 'params=' + parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + parse.quote_plus(Form_Info_Tail)
+    Form_Info_Encoded = 'params=' + urllib.parse.quote_plus(Form_Info_Head + Form_Info_Body + Form_Info_Butt) + '&lifeparams=' + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Termination, data=Form_Info_Encoded, headers=Request_Header)
     Response_Body = bytes(Response_Body.text, encoding="utf-8")
-    Response_Body = etree.HTML(Response_Body)
+    Response_Body = lxml.etree.HTML(Response_Body)
     List_Termination_State = Response_Body.xpath('//@msg')
     print('P11-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
 def Excute_Update_1(Para_List_CS_Data):
     Dic_Response = []
     URL_Query_OpticalCable = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
-    XML_Info_Encoded = 'xml=' + parse.quote_plus('''<request><query mc="guanglanduan" ids="" where="1=1 AND ZH_LABEL LIKE '%''' + Para_List_CS_Data['A_Box_Name'] + '资源点-' + Para_List_CS_Data['Z_Box_Name'] + '资源点' + '''%'" returnfields="INT_ID,ZH_LABEL,ALIAS,CITY_ID,COUNTY_ID,STATUS,PRO_TASK_ID,CJ_TASK_ID,A_EQUIP_TYPE,CJ_STATUS,A_EQUIP_ID,A_ROOM_ID,A_OBJECT_TYPE,A_OBJECT_ID,Z_EQUIP_TYPE,Z_EQUIP_ID,Z_ROOM_ID,Z_OBJECT_TYPE,Z_OBJECT_ID,SERVICE_LEVEL,C_LENGTH,M_LENGTH,FIBER_NUM,RELATED_SYSTEM,WIRE_SEG_TYPE,DIRECTION,IS_ALTER,FIBER_TYPE,DIA,GT_VERSION,VENDOR,OPTI_CABLE_TYPE,MAINT_DEP,MAINT_MODE,LAY_TYPE,RELATED_IS_AREA,IS_WRONG,MAINT_STATE,AREA_LEVEL,WRONG_INFO,SYS_VERSION,OWNERSHIP,PHONE_NO,TIME_STAMP,RES_OWNER,PRODUCE_DATE,PROJECTCODE,BUSINESS,TASK_NAME,ASSENT_NO,SERVICER,RUWANG_DATE,STUFF,BUILDER,TUIWANG_DATE,QUALITOR_PROJECT,PROJECT_ID,QUALITOR,QUALITOR_COUNTY,MAINTAINOR,QRCODE,SEG_NO,REMARK,INDEX_IN_BRANCH,IS_COMPLETE_LAY,MAINTAIN_CITY,MAINTAIN_COUNTY,CREATOR,CREAT_TIME,MODIFIER,MODIFY_TIME,STATEFLAG,BUILD_DATE,PROJECT_NAME,USER_NAME,PURPOSE,PROJECT,YJTZ,JSLY,JSYXJ,SQJSNF"/></request>''')
+    XML_Info_Encoded = 'xml=' + urllib.parse.quote_plus('''<request><query mc="guanglanduan" ids="" where="1=1 AND ZH_LABEL LIKE '%''' + Para_List_CS_Data['A_Box_Name'] + '资源点-' + Para_List_CS_Data['Z_Box_Name'] + '资源点' + '''%'" returnfields="INT_ID,ZH_LABEL,ALIAS,CITY_ID,COUNTY_ID,STATUS,PRO_TASK_ID,CJ_TASK_ID,A_EQUIP_TYPE,CJ_STATUS,A_EQUIP_ID,A_ROOM_ID,A_OBJECT_TYPE,A_OBJECT_ID,Z_EQUIP_TYPE,Z_EQUIP_ID,Z_ROOM_ID,Z_OBJECT_TYPE,Z_OBJECT_ID,SERVICE_LEVEL,C_LENGTH,M_LENGTH,FIBER_NUM,RELATED_SYSTEM,WIRE_SEG_TYPE,DIRECTION,IS_ALTER,FIBER_TYPE,DIA,GT_VERSION,VENDOR,OPTI_CABLE_TYPE,MAINT_DEP,MAINT_MODE,LAY_TYPE,RELATED_IS_AREA,IS_WRONG,MAINT_STATE,AREA_LEVEL,WRONG_INFO,SYS_VERSION,OWNERSHIP,PHONE_NO,TIME_STAMP,RES_OWNER,PRODUCE_DATE,PROJECTCODE,BUSINESS,TASK_NAME,ASSENT_NO,SERVICER,RUWANG_DATE,STUFF,BUILDER,TUIWANG_DATE,QUALITOR_PROJECT,PROJECT_ID,QUALITOR,QUALITOR_COUNTY,MAINTAINOR,QRCODE,SEG_NO,REMARK,INDEX_IN_BRANCH,IS_COMPLETE_LAY,MAINTAIN_CITY,MAINTAIN_COUNTY,CREATOR,CREAT_TIME,MODIFIER,MODIFY_TIME,STATEFLAG,BUILD_DATE,PROJECT_NAME,USER_NAME,PURPOSE,PROJECT,YJTZ,JSLY,JSYXJ,SQJSNF"/></request>''')
     HTTP_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded"}
     Respond_Body = requests.post(URL_Query_OpticalCable,data=XML_Info_Encoded,headers=HTTP_Header)
     Respond_Body = bytes(Respond_Body.text, encoding="utf-8")
-    Respond_Body = etree.HTML(Respond_Body)
+    Respond_Body = lxml.etree.HTML(Respond_Body)
     List_Response_Key = Respond_Body.xpath("//fv/@k")
     List_Response_Value = Respond_Body.xpath("//fv/@v")
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
     if (Dic_Response['A_EQUIP_ID'] == '') or (Dic_Response['A_EQUIP_TYPE'] == '') or (Dic_Response['A_ROOM_ID'] == ''):
         URL_Renew_OpticalCable = "http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=update&coreNamingRules=0"
-        XML_Info_Encoded = "xml=" + parse.quote_plus('<xmldata mode="FibersegEditMode"><mc type="guanglanduan"><mo group="1"><fv k="A_OBJECT_TYPE" v="' + str(Dic_Response["A_OBJECT_TYPE"]) + '"/><fv k="AREA_LEVEL" v="' + str(Dic_Response["AREA_LEVEL"]) + '"/><fv k="STATUS" v="' + str(Dic_Response["STATUS"]) + '"/><fv k="Z_OBJECT_TYPE" v="' + str(Dic_Response["Z_OBJECT_TYPE"]) + '"/><fv k="SQJSNF" v="' + str(Dic_Response["SQJSNF"]) + '"/><fv k="Z_EQUIP_TYPE" v="' + str(Dic_Response["Z_EQUIP_TYPE"]) + '"/><fv k="Z_OBJECT_ID" v="' + str(Dic_Response["Z_OBJECT_ID"]) + '"/><fv k="A_EQUIP_ID" v="' + str(Para_List_CS_Data['A_Box_ID']) + '"/><fv k="RUWANG_DATE" v="' + str(Dic_Response["RUWANG_DATE"]) + '"/><fv k="A_EQUIP_TYPE" v="' + str(Para_List_CS_Data['A_Box_Type_ID']) + '"/><fv k="YJTZ" v="' + str(Dic_Response["YJTZ"]) + '"/><fv k="QUALITOR" v="' + str(Dic_Response["QUALITOR"]) + '"/><fv k="Z_EQUIP_ID" v="' + str(Dic_Response["Z_EQUIP_ID"]) + '"/><fv k="PROJECT_NAME" v="' + str(Dic_Response["PROJECT_NAME"]) + '"/><fv k="JSLY" v="' + str(Dic_Response["JSLY"]) + '"/><fv k="LAY_TYPE" v="' + str(Dic_Response["LAY_TYPE"]) + '"/><fv k="ASSENT_NO" v="' + str(Dic_Response["ASSENT_NO"]) + '"/><fv k="MAINTAIN_COUNTY" v="' + str(Dic_Response["MAINTAIN_COUNTY"]) + '"/><fv k="PROJECT_ID" v="' + str(Dic_Response["PROJECT_ID"]) + '"/><fv k="C_LENGTH" v="' + str(Dic_Response["C_LENGTH"]) + '"/><fv k="MAINTAIN_CITY" v="' + str(Dic_Response["MAINTAIN_CITY"]) + '"/><fv k="MAINT_DEP" v="' + str(Dic_Response["MAINT_DEP"]) + '"/><fv k="SYS_VERSION" v="' + str(Dic_Response["SYS_VERSION"]) + '"/><fv k="USER_NAME" v="' + str(Dic_Response["USER_NAME"]) + '"/><fv k="ALIAS" v="' + str(Dic_Response["ALIAS"]) + '"/><fv k="CJ_STATUS" v="' + str(Dic_Response["CJ_STATUS"]) + '"/><fv k="BUILDER" v="' + str(Dic_Response["BUILDER"]) + '"/><fv k="MAINT_STATE" v="' + str(Dic_Response["MAINT_STATE"]) + '"/><fv k="A_ROOM_ID" v="' + str(Para_List_CS_Data['A_ResPoint_ID']) + '"/><fv k="STUFF" v="' + str(Dic_Response["STUFF"]) + '"/><fv k="JSYXJ" v="' + str(Dic_Response["JSYXJ"]) + '"/><fv k="FIBER_TYPE" v="' + str(Dic_Response["FIBER_TYPE"]) + '"/><fv k="MAINT_MODE" v="' + str(Dic_Response["MAINT_MODE"]) + '"/><fv k="Z_ROOM_ID" v="' + str(Dic_Response["Z_ROOM_ID"]) + '"/><fv k="BUILD_DATE" v="' + str(Dic_Response["BUILD_DATE"]) + '"/><fv k="WIRE_SEG_TYPE" v="' + str(Dic_Response["WIRE_SEG_TYPE"]) + '"/><fv k="QUALITOR_PROJECT" v="' + str(Dic_Response["QUALITOR_PROJECT"]) + '"/><fv k="REMARK" v="' + str(Dic_Response["REMARK"]) + '"/><fv k="INT_ID" v="' + str(Dic_Response["INT_ID"]) + '"/><fv k="COUNTY_ID" v="' + str(Dic_Response["COUNTY_ID"]) + '"/><fv k="TASK_NAME" v="' + str(Dic_Response["TASK_NAME"]) + '"/><fv k="IS_ALTER" v="' + str(Dic_Response["IS_ALTER"]) + '"/><fv k="RES_OWNER" v="' + str(Dic_Response["RES_OWNER"]) + '"/><fv k="GT_VERSION" v="' + str(Dic_Response["GT_VERSION"]) + '"/><fv k="PRO_TASK_ID" v="' + str(Dic_Response["PRO_TASK_ID"]) + '"/><fv k="CJ_TASK_ID" v="' + str(Dic_Response["CJ_TASK_ID"]) + '"/><fv k="QUALITOR_COUNTY" v="' + str(Dic_Response["QUALITOR_COUNTY"]) + '"/><fv k="DIRECTION" v="' + str(Dic_Response["DIRECTION"]) + '"/><fv k="PRODUCE_DATE" v="' + str(Dic_Response["PRODUCE_DATE"]) + '"/><fv k="SERVICER" v="' + str(Dic_Response["SERVICER"]) + '"/><fv k="FIBER_NUM" v="' + str(Dic_Response["FIBER_NUM"]) + '"/><fv k="OPTI_CABLE_TYPE" v="' + str(Dic_Response["OPTI_CABLE_TYPE"]) + '"/><fv k="PROJECTCODE" v="' + str(Dic_Response["PROJECTCODE"]) + '"/><fv k="VENDOR" v="' + str(Dic_Response["VENDOR"]) + '"/><fv k="IS_WRONG" v="' + str(Dic_Response["IS_WRONG"]) + '"/><fv k="PHONE_NO" v="' + str(Dic_Response["PHONE_NO"]) + '"/><fv k="RELATED_IS_AREA" v="' + str(Dic_Response["RELATED_IS_AREA"]) + '"/><fv k="WRONG_INFO" v="' + str(Dic_Response["WRONG_INFO"]) + '"/><fv k="DIA" v="' + str(Dic_Response["DIA"]) + '"/><fv k="SERVICE_LEVEL" v="' + str(Dic_Response["SERVICE_LEVEL"]) + '"/><fv k="BUSINESS" v="' + str(Dic_Response["BUSINESS"]) + '"/><fv k="TUIWANG_DATE" v="' + str(Dic_Response["TUIWANG_DATE"]) + '"/><fv k="IS_COMPLETE_LAY" v="' + str(Dic_Response["IS_COMPLETE_LAY"]) + '"/><fv k="QRCODE" v="' + str(Dic_Response["QRCODE"]) + '"/><fv k="ZH_LABEL" v="' + str(Dic_Response["ZH_LABEL"]) + '"/><fv k="M_LENGTH" v="' + str(Dic_Response["M_LENGTH"]) + '"/><fv k="OWNERSHIP" v="' + str(Dic_Response["OWNERSHIP"]) + '"/><fv k="RELATED_SYSTEM" v="' + str(Dic_Response["RELATED_SYSTEM"]) + '"/><fv k="PURPOSE" v="' + str(Dic_Response["PURPOSE"]) + '"/><fv k="INDEX_IN_BRANCH" v="' + str(Dic_Response["INDEX_IN_BRANCH"]) + '"/><fv k="SEG_NO" v="' + str(Dic_Response["SEG_NO"]) + '"/><fv k="CITY_ID" v="' + str(Dic_Response["CITY_ID"]) + '"/><fv k="A_OBJECT_ID" v="' + str(Dic_Response["A_OBJECT_ID"]) + '"/><fv k="MAINTAINOR" v="' + str(Dic_Response["MAINTAINOR"]) + '"/><fv k="PROJECT" v="' + str(Dic_Response["PROJECT"]) + '"/></mo></mc></xmldata>')
+        XML_Info_Encoded = "xml=" + urllib.parse.quote_plus('<xmldata mode="FibersegEditMode"><mc type="guanglanduan"><mo group="1"><fv k="A_OBJECT_TYPE" v="' + str(Dic_Response["A_OBJECT_TYPE"]) + '"/><fv k="AREA_LEVEL" v="' + str(Dic_Response["AREA_LEVEL"]) + '"/><fv k="STATUS" v="' + str(Dic_Response["STATUS"]) + '"/><fv k="Z_OBJECT_TYPE" v="' + str(Dic_Response["Z_OBJECT_TYPE"]) + '"/><fv k="SQJSNF" v="' + str(Dic_Response["SQJSNF"]) + '"/><fv k="Z_EQUIP_TYPE" v="' + str(Dic_Response["Z_EQUIP_TYPE"]) + '"/><fv k="Z_OBJECT_ID" v="' + str(Dic_Response["Z_OBJECT_ID"]) + '"/><fv k="A_EQUIP_ID" v="' + str(Para_List_CS_Data['A_Box_ID']) + '"/><fv k="RUWANG_DATE" v="' + str(Dic_Response["RUWANG_DATE"]) + '"/><fv k="A_EQUIP_TYPE" v="' + str(Para_List_CS_Data['A_Box_Type_ID']) + '"/><fv k="YJTZ" v="' + str(Dic_Response["YJTZ"]) + '"/><fv k="QUALITOR" v="' + str(Dic_Response["QUALITOR"]) + '"/><fv k="Z_EQUIP_ID" v="' + str(Dic_Response["Z_EQUIP_ID"]) + '"/><fv k="PROJECT_NAME" v="' + str(Dic_Response["PROJECT_NAME"]) + '"/><fv k="JSLY" v="' + str(Dic_Response["JSLY"]) + '"/><fv k="LAY_TYPE" v="' + str(Dic_Response["LAY_TYPE"]) + '"/><fv k="ASSENT_NO" v="' + str(Dic_Response["ASSENT_NO"]) + '"/><fv k="MAINTAIN_COUNTY" v="' + str(Dic_Response["MAINTAIN_COUNTY"]) + '"/><fv k="PROJECT_ID" v="' + str(Dic_Response["PROJECT_ID"]) + '"/><fv k="C_LENGTH" v="' + str(Dic_Response["C_LENGTH"]) + '"/><fv k="MAINTAIN_CITY" v="' + str(Dic_Response["MAINTAIN_CITY"]) + '"/><fv k="MAINT_DEP" v="' + str(Dic_Response["MAINT_DEP"]) + '"/><fv k="SYS_VERSION" v="' + str(Dic_Response["SYS_VERSION"]) + '"/><fv k="USER_NAME" v="' + str(Dic_Response["USER_NAME"]) + '"/><fv k="ALIAS" v="' + str(Dic_Response["ALIAS"]) + '"/><fv k="CJ_STATUS" v="' + str(Dic_Response["CJ_STATUS"]) + '"/><fv k="BUILDER" v="' + str(Dic_Response["BUILDER"]) + '"/><fv k="MAINT_STATE" v="' + str(Dic_Response["MAINT_STATE"]) + '"/><fv k="A_ROOM_ID" v="' + str(Para_List_CS_Data['A_ResPoint_ID']) + '"/><fv k="STUFF" v="' + str(Dic_Response["STUFF"]) + '"/><fv k="JSYXJ" v="' + str(Dic_Response["JSYXJ"]) + '"/><fv k="FIBER_TYPE" v="' + str(Dic_Response["FIBER_TYPE"]) + '"/><fv k="MAINT_MODE" v="' + str(Dic_Response["MAINT_MODE"]) + '"/><fv k="Z_ROOM_ID" v="' + str(Dic_Response["Z_ROOM_ID"]) + '"/><fv k="BUILD_DATE" v="' + str(Dic_Response["BUILD_DATE"]) + '"/><fv k="WIRE_SEG_TYPE" v="' + str(Dic_Response["WIRE_SEG_TYPE"]) + '"/><fv k="QUALITOR_PROJECT" v="' + str(Dic_Response["QUALITOR_PROJECT"]) + '"/><fv k="REMARK" v="' + str(Dic_Response["REMARK"]) + '"/><fv k="INT_ID" v="' + str(Dic_Response["INT_ID"]) + '"/><fv k="COUNTY_ID" v="' + str(Dic_Response["COUNTY_ID"]) + '"/><fv k="TASK_NAME" v="' + str(Dic_Response["TASK_NAME"]) + '"/><fv k="IS_ALTER" v="' + str(Dic_Response["IS_ALTER"]) + '"/><fv k="RES_OWNER" v="' + str(Dic_Response["RES_OWNER"]) + '"/><fv k="GT_VERSION" v="' + str(Dic_Response["GT_VERSION"]) + '"/><fv k="PRO_TASK_ID" v="' + str(Dic_Response["PRO_TASK_ID"]) + '"/><fv k="CJ_TASK_ID" v="' + str(Dic_Response["CJ_TASK_ID"]) + '"/><fv k="QUALITOR_COUNTY" v="' + str(Dic_Response["QUALITOR_COUNTY"]) + '"/><fv k="DIRECTION" v="' + str(Dic_Response["DIRECTION"]) + '"/><fv k="PRODUCE_DATE" v="' + str(Dic_Response["PRODUCE_DATE"]) + '"/><fv k="SERVICER" v="' + str(Dic_Response["SERVICER"]) + '"/><fv k="FIBER_NUM" v="' + str(Dic_Response["FIBER_NUM"]) + '"/><fv k="OPTI_CABLE_TYPE" v="' + str(Dic_Response["OPTI_CABLE_TYPE"]) + '"/><fv k="PROJECTCODE" v="' + str(Dic_Response["PROJECTCODE"]) + '"/><fv k="VENDOR" v="' + str(Dic_Response["VENDOR"]) + '"/><fv k="IS_WRONG" v="' + str(Dic_Response["IS_WRONG"]) + '"/><fv k="PHONE_NO" v="' + str(Dic_Response["PHONE_NO"]) + '"/><fv k="RELATED_IS_AREA" v="' + str(Dic_Response["RELATED_IS_AREA"]) + '"/><fv k="WRONG_INFO" v="' + str(Dic_Response["WRONG_INFO"]) + '"/><fv k="DIA" v="' + str(Dic_Response["DIA"]) + '"/><fv k="SERVICE_LEVEL" v="' + str(Dic_Response["SERVICE_LEVEL"]) + '"/><fv k="BUSINESS" v="' + str(Dic_Response["BUSINESS"]) + '"/><fv k="TUIWANG_DATE" v="' + str(Dic_Response["TUIWANG_DATE"]) + '"/><fv k="IS_COMPLETE_LAY" v="' + str(Dic_Response["IS_COMPLETE_LAY"]) + '"/><fv k="QRCODE" v="' + str(Dic_Response["QRCODE"]) + '"/><fv k="ZH_LABEL" v="' + str(Dic_Response["ZH_LABEL"]) + '"/><fv k="M_LENGTH" v="' + str(Dic_Response["M_LENGTH"]) + '"/><fv k="OWNERSHIP" v="' + str(Dic_Response["OWNERSHIP"]) + '"/><fv k="RELATED_SYSTEM" v="' + str(Dic_Response["RELATED_SYSTEM"]) + '"/><fv k="PURPOSE" v="' + str(Dic_Response["PURPOSE"]) + '"/><fv k="INDEX_IN_BRANCH" v="' + str(Dic_Response["INDEX_IN_BRANCH"]) + '"/><fv k="SEG_NO" v="' + str(Dic_Response["SEG_NO"]) + '"/><fv k="CITY_ID" v="' + str(Dic_Response["CITY_ID"]) + '"/><fv k="A_OBJECT_ID" v="' + str(Dic_Response["A_OBJECT_ID"]) + '"/><fv k="MAINTAINOR" v="' + str(Dic_Response["MAINTAINOR"]) + '"/><fv k="PROJECT" v="' + str(Dic_Response["PROJECT"]) + '"/></mo></mc></xmldata>')
         XML_Info_Encoded = XML_Info_Encoded.replace("/","%2f")
         Request_Lenth = chr(len(XML_Info_Encoded))
         HTTP_Header = {"Host": "10.209.199.74:8120","Content-Type": "application/x-www-form-urlencoded","Content-Length": Request_Lenth}
         Respond_Body = requests.post(URL_Renew_OpticalCable,data=XML_Info_Encoded,headers=HTTP_Header)
         Respond_Body = bytes(Respond_Body.text, encoding="utf-8")
-        Respond_Body = etree.HTML(Respond_Body)
+        Respond_Body = lxml.etree.HTML(Respond_Body)
         Renew_State = Respond_Body.xpath("//@loaded")
         print('P12-' + Dic_Response["ZH_LABEL"]  +  " "  +  Renew_State[0])
 
@@ -1482,9 +1481,10 @@ if __name__ == '__main__':
             Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
             Generate_OC_POS_Data_and_OC_Name()
             Query_Optical_Route_Sheet_ID()
+            Query_Integrate_Sheet_ID()
             Query_OC_Int_ID()
 
-            WB_obj = load_workbook(each_File_Name+'.xlsx')
+            WB_obj = openpyxl.load_workbook(each_File_Name+'.xlsx')
 
             # List_Box_Data
             WS_obj = WB_obj.create_sheet('List_Box_Data')
