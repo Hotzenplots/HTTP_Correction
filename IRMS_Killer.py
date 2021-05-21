@@ -17,10 +17,12 @@ import re
 7013表考虑是否不精简
 优化from语句
 分光器中文名称末尾正则表达式
-入网流程建立工单
+
 数据完整性验(http返回状态统计,数据数量统计,SFB,OCS,)
 小区状态统计(ODM,)
+数据测存储与验证
 
+重新主线流程
 '''
 
 File_Name = ['平舆小黑']
@@ -607,8 +609,8 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
 
 def Query_Support_Sys_and_Cable_Sys():
     Task_Name_ID_List = List_7013[1][5].split('-')
-    Support_Sys_Name = List_7013[1][0]+List_7013[1][1]+Task_Name_ID_List[1]+'区内引上系统'
-    Cable_Sys_Name = List_7013[1][0]+List_7013[1][1]+Task_Name_ID_List[1]+'接入层架空光缆'
+    Support_Sys_Name = List_7013[1][0]+List_7013[1][1]+Task_Name_ID_List[1]+'驻地网引上'
+    Cable_Sys_Name = List_7013[1][0]+List_7013[1][1]+Task_Name_ID_List[1]+'驻地网架空光缆'
 
     #Support_System
     URL_Query_SS_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGetPage'
@@ -916,33 +918,67 @@ def Query_Optical_Route_Sheet_ID():
 def Query_Integrate_Sheet_ID():
 
     Task_Name_ID_List = List_7013[1][5].split('-')
-    Query_Run_Certification()
 
-    List_Integrate_Sheet_Name = ['关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请-汇聚', '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请-区内']
-    for sheet_name in List_Integrate_Sheet_Name:
-        URL_Query_Integrate_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
-        Form_Info_Encoded = 'processinstname=' + parse.quote_plus(sheet_name)
+    Integrate_Sheet_Time = []
+    Integrate_Sheet_Time.append(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    Integrate_Sheet_Time.append((datetime.datetime.now() + datetime.timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S'))
+    Integrate_Sheet_Time.append((datetime.datetime.now() + datetime.timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S'))
+
+    Integrate_Sheet_Name = '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请'
+    URL_Query_Integrate_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
+    Form_Info_Encoded = 'processinstname=' + parse.quote_plus(Integrate_Sheet_Name)
+    Request_Lenth = str(len(Form_Info_Encoded))
+    Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+    Response_Body = requests.post(URL_Query_Integrate_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
+    Response_Body = Response_Body.text
+    Response_Body = json.loads(Response_Body)
+    if Response_Body['totalCount'] == 0:
+
+        print("新建管线入网工单", Integrate_Sheet_Name)
+        URL_Create_Integrate_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/pipelineresInAction!getProtectNameForCombox.ilf'
+        Form_Info_Encoded = 'start=0&limit=10&paramName=' +  List_7013[1][4]
         Request_Lenth = str(len(Form_Info_Encoded))
         Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
-        Response_Body = requests.post(URL_Query_Integrate_Sheet_Exist, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        Response_Body = Response_Body.text
-        Response_Body = json.loads(Response_Body)
-        if Response_Body['totalCount'] == 0:
+        Response_Body = requests.post(URL_Create_Integrate_Sheet_Step_1, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
+        Response_Body = json.loads(Response_Body.text)
+        Project_Code_ID = Response_Body['root'][0]['INT_ID']
 
-            print(sheet_name,"无工单")
+        URL_Create_Integrate_Sheet_Step_2 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded'}
+        Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_2, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
+        Response_Body = bytes(Response_Body.text, encoding="utf-8")
+        Response_Body = etree.HTML(Response_Body)
+        List_Integrate_Sheet_Key = Response_Body.xpath('//input/@name')
+        List_Integrate_Sheet_Value = Response_Body.xpath('//input/@value')
+        Dic_Integrate_Sheet_Info = dict(zip(List_Integrate_Sheet_Key, List_Integrate_Sheet_Value))
 
-            # URL_Create_Integrate_Sheet_Step_1 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'
-            # Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_1, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-            # Response_Body = bytes(Response_Body.text, encoding="utf-8")
-            # Response_Body = etree.HTML(Response_Body)
-            # List_Integrate_Sheet_Info = Response_Body.xpath('//input/@value')
-            # URL_Create_Integrate_Sheet_Step_2 = 'http://10.209.199.72:7112/irms/pipelineresInAction!submit.ilf'
-            # Form_Info_Encoded = 'ownerId=' + List_Integrate_Sheet_Info[1] + '&deptId=' + List_Integrate_Sheet_Info[2] + '&flowId=' + List_Integrate_Sheet_Info[3] + 
-            # print(List_Integrate_Sheet_Info)
+        URL_Create_Integrate_Sheet_Step_3 = 'http://10.209.199.72:7112/irms/pipelineresInAction!saveDraft.ilf'
+        Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + '&pid=' + '&toppid=' + '&companyName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + parse.quote_plus(List_7013[1][5]) + '&remark='
+        Request_Lenth = str(len(Form_Info_Encoded))
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+        Response_Body = requests.post(URL_Create_Integrate_Sheet_Step_3, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
 
-        elif Response_Body['totalCount'] != 0:
-            print(sheet_name,"有工单")
-            print(Response_Body['root'][0]['PROCESSINSTID'])
+        URL_Create_Integrate_Sheet_Step_4 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf' +'?currentstate=0&flowId=' + Dic_Integrate_Sheet_Info['flowId']
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded'}
+        Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_4, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
+        Response_Body = bytes(Response_Body.text, encoding="utf-8")
+        Response_Body = etree.HTML(Response_Body)
+        List_Integrate_Sheet_Key = Response_Body.xpath('//input/@name')
+        List_Integrate_Sheet_Value = Response_Body.xpath('//input/@value')
+        Dic_Integrate_Sheet_Info = dict(zip(List_Integrate_Sheet_Key, List_Integrate_Sheet_Value))
+
+        URL_Create_Integrate_Sheet_Step_5 = 'http://10.209.199.72:7112/irms/pipelineresInAction!submit.ilf'
+        Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + str(Dic_Integrate_Sheet_Info['id']) + '&pid=' + '&toppid=' + '&companyName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + parse.quote_plus(List_7013[1][5]) + '&remark='
+        Request_Lenth = str(len(Form_Info_Encoded))
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+        Response_Body = requests.post(URL_Create_Integrate_Sheet_Step_5, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
+
+        Query_Integrate_Sheet_ID()
+
+    elif Response_Body['totalCount'] != 0:
+        print(Integrate_Sheet_Name, "工单编号", Response_Body['root'][0]['PROCESSINSTID'])
+        for each_oc_data in List_OC_Data:
+            each_oc_data['Pro_ID'] = Response_Body['root'][0]['PROCESSINSTID']
 
 def Query_OC_Int_ID():
     List_Pro_ID = []
@@ -964,6 +1000,7 @@ def Query_OC_Int_ID():
                 if oc_data['OC_Name'] == oc_info_in_response['opticname']:
                     oc_data['Int_ID'] = oc_info_in_response['intId']
                     break
+
 
 def Execute_Push_Box():
     URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=move'
@@ -990,7 +1027,7 @@ def Execute_Generate_Support_Segment():
     Form_Info_Tail = '</mc></xmldata>'
     List_Form_Info_Body = []
     for ocs_num in List_CS_Data:
-        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Support_Sys_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="INT_ID" v="new-27991311"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="PROJECT_CODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="RESOURCE_LOCATION" v="'+str(ocs_num['Field_Type'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="SYSTEM_LEVEL" v="'+str(ocs_num['Business_Level'])+'"/></mo>'
+        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Support_Sys_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="INT_ID" v="new-27991311"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="PROJECT_CODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="RESOURCE_LOCATION" v="'+str(ocs_num['Field_Type'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="SYSTEM_LEVEL" v="'+str(ocs_num['Business_Level'])+'<fv k="PRO_TASK_ID" v="'+str(ocs_num['Pro_ID'])+'"/></mo>'
         List_Form_Info_Body.append(Form_Info_Body)
     Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
@@ -1009,7 +1046,7 @@ def Execute_Generate_Cable_Segment():
     Form_Info_Tail = '</mc></xmldata>'
     List_Form_Info_Body = []
     for ocs_num in List_CS_Data:
-        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Cable_Sys_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点'+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="FIBER_TYPE" v="2"/><fv k="INT_ID" v="new-27991311"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="FIBER_NUM" v="'+str(ocs_num['Width'])+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="WIRE_SEG_TYPE" v="GYTA-'+str(ocs_num['Width'])+'"/><fv k="SERVICE_LEVEL" v="14"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="PROJECTCODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/></mo>'
+        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Cable_Sys_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点'+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="FIBER_TYPE" v="2"/><fv k="INT_ID" v="new-27991311"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="FIBER_NUM" v="'+str(ocs_num['Width'])+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="WIRE_SEG_TYPE" v="GYTA-'+str(ocs_num['Width'])+'"/><fv k="SERVICE_LEVEL" v="14"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="PROJECTCODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'<fv k="PRO_TASK_ID" v="'+str(ocs_num['Pro_ID'])+'"/></mo>'
         List_Form_Info_Body.append(Form_Info_Body)
     Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
@@ -1303,6 +1340,11 @@ def Main_Process(Para_File_Name):
         print('查询Project_Code_ID')
         Query_Project_Code_ID()
 
+    if (P2_Generate_Support_Segment or 
+        P3_Generate_Cable_Segment):
+        Query_Create_Certification()
+        Query_Integrate_Sheet_ID()
+
     if P2_Generate_Support_Segment:
         print('P2-开始')
         Execute_Generate_Support_Segment()
@@ -1494,3 +1536,18 @@ if __name__ == '__main__':
 
             WB_obj.save(each_File_Name+'.xlsx')
             WB_obj.close()
+
+# print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
+
+# 0'太原', 
+# 1'阳曲县', 
+# 2'太原阳曲县山西豪德置业有限公司企业宽带GF1006号东楼道GF2006二级分光器001', 
+# 3'太原阳曲县山西豪德置业有限公司企业宽带GF1006号东楼道GF2006', 
+# 4'B20304188218004', 
+# 5'2870791671-山西豪德置业有限公司',
+# 6'太原阳曲县大盂-OLT68-FH-AN5516-01',
+# 7'ME_大盂:Board_GCOB[1]-PTP_GPON4', 
+# 8'太原阳曲县山西豪德置业有限公司企业宽带1-7#东楼道2号一级分光器', 
+# 9'太原阳曲县山西豪德置业有限公司企业宽带1-7#东楼道2号一级分光器-1-006', 
+# 10'二级', 
+# 11'太原阳曲县山西豪德置业有限公司企业宽带1-6#东楼道2-6二级分光器'
