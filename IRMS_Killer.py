@@ -14,10 +14,7 @@ import requests
 import urllib
 
 '''
-7013表考虑是否不精简
-分光器中文名称末尾正则表达式
-
-数据完整性验(http返回状态统计,数据数量统计,SFB,OCS,)
+数据完整性验(http返回状态统计,数据数量统计,SFB,OCS)
 小区状态统计(ODM,)
 数据测存储与验证
 
@@ -36,22 +33,25 @@ def Generate_Local_Data(Para_File_Name):
     '''读取并整理7013表,生成List_7013'''
     global List_7013
     List_7013 = []
+    List_Original_7013 = []
+    List_Original_Num = []
     with open(Para_File_Name+'.csv') as file_csv:
         reader_obj = csv.reader(file_csv)
-        List_7013 = list(reader_obj)
-    for row_data in range(len(List_7013)):
-        del List_7013[row_data][0]
-        del List_7013[row_data][2:4]
-        del List_7013[row_data][3]
-        del List_7013[row_data][4:6]
-        del List_7013[row_data][6]
-        del List_7013[row_data][8:12]
-        del List_7013[row_data][9]
-        del List_7013[row_data][11:39]
+        List_Original_7013 = list(reader_obj)
+    List_7013_Use = ['所属地市', '所属区县', '资管中文名称', '安装位置', '项目编号', '任务名称', '主用OLT', '主用OLT的PON端口', '上级POS名称', '上级POS端口', '级别', '中文名称']
+    for column_num, column_name in enumerate(List_7013_Use):
+        for column_num_2, column_name_2 in enumerate(List_Original_7013[0]):
+            if column_name == column_name_2:
+                List_Original_Num.append(column_num_2)
+    for each_original_7013 in List_Original_7013:
+        each_7013 = []
+        for index_num in List_Original_Num:
+            each_7013.append(each_original_7013[index_num])
+        List_7013.append(each_7013)
     Task_Name_ID_List = List_7013[1][5].split('-')
 
     '''读取并整理Sheet_Template,生成List_Template'''
-    WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx')
+    WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx') 
 
     WS_obj = WB_obj['Info']
     List_Template = []
@@ -111,7 +111,6 @@ def Generate_Local_Data(Para_File_Name):
     while WS_obj[('H' + str(2 + box_num))].value:
         List_Modify_For_Photo.append([WS_obj[('H' + str(2 + box_num))].value, WS_obj[('I' + str(2 + box_num))].value, WS_obj[('J' + str(2 + box_num))].value])
         box_num += 1
-
 
     # 箱体类型ID
     List_Box_Type = [['guangfenxianxiang', 9204, 9115], ['guangjiaojiexiang', 9203, 9115]]
@@ -857,9 +856,7 @@ def Query_POS_Port_IDs(Para_List_Box_Data):
         
         #写入A_Port_ID,Z_Port_Name,Z_Port_ID
         Dic_Port_Name_and_Port_ID = dict(zip(List_POS_Port_Names, List_POS_Port_IDs))
-        RE_Pattern = re.compile(r'^.*分光器')
-        # RE_Pattern = re.compile(r'^.*分光器\d{3')
-        # RE_Pattern = re.compile(r'^.*分光器001')
+        RE_Pattern = re.compile(r'^.*分光器\d{3}|^.*分光器')
         for each_oc_data in List_OC_Data:
             for each_name,each_id in Dic_Port_Name_and_Port_ID.items():
                 if each_oc_data['A_Port_Name'] == each_name:
@@ -975,7 +972,7 @@ def Query_Integrate_Sheet_ID():
         Query_Integrate_Sheet_ID()
 
     elif Response_Body['totalCount'] != 0:
-        print(Integrate_Sheet_Name, "工单编号", Response_Body['root'][0]['PROCESSINSTID'])
+        print(Integrate_Sheet_Name, "工单Pro_ID", Response_Body['root'][0]['PROCESSINSTID'])
         for each_cs_data in List_CS_Data:
             each_cs_data['Pro_ID'] = Response_Body['root'][0]['PROCESSINSTID']
 
