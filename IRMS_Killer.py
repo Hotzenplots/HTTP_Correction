@@ -1302,6 +1302,79 @@ def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
 
+    if P0_Data_Check:
+        Generate_Local_Data(each_File_Name)
+        Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
+        Query_Support_Sys_and_Cable_Sys()
+        Query_Project_Code_ID()
+        Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
+        Generate_Topology()
+        Generate_FS_Data()
+        Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
+        Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+        Generate_Termination_and_Direct_Melt_Data()
+        Query_Run_Certification()
+        Query_Create_Certification()
+        Swimming_Pool(Query_POS_ID, List_Box_Data)
+        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+        Generate_OC_POS_Data_and_OC_Name()
+        Query_Optical_Route_Sheet_ID()
+        Query_Integrate_Sheet_ID()
+        Query_OC_Int_ID()
+
+        WB_obj = openpyxl.load_workbook(each_File_Name+'.xlsx')
+
+        # List_Box_Data
+        WS_obj = WB_obj.create_sheet('List_Box_Data')
+        Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_box_data in List_Box_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_Box_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+        # List_CS_Data
+        WS_obj = WB_obj.create_sheet('List_CS_Data')
+        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_cs_data in List_CS_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_CS_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+        # List_OC_Data
+        WS_obj = WB_obj.create_sheet('List_OC_Data')
+        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_oc_data in List_OC_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_OC_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+        WB_obj.save(each_File_Name+'.xlsx')
+        WB_obj.close()
+
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
@@ -1460,91 +1533,4 @@ if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
 
-        # 数据测试
-        if P0_Data_Check:
-            Generate_Local_Data(each_File_Name)
-            Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
-            Query_Support_Sys_and_Cable_Sys()
-            Query_Project_Code_ID()
-            Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
-            Generate_Topology()
-            Generate_FS_Data()
-            Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
-            Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-            Generate_Termination_and_Direct_Melt_Data()
-            Query_Run_Certification()
-            Query_Create_Certification()
-            Swimming_Pool(Query_POS_ID, List_Box_Data)
-            Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-            Generate_OC_POS_Data_and_OC_Name()
-            Query_Optical_Route_Sheet_ID()
-            Query_Integrate_Sheet_ID()
-            Query_OC_Int_ID()
-
-            WB_obj = openpyxl.load_workbook(each_File_Name+'.xlsx')
-
-            # List_Box_Data
-            WS_obj = WB_obj.create_sheet('List_Box_Data')
-            Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
-            Column_Num = 0
-            for key in Dic_Column_Name.keys():
-                Column_Num += 1
-                WS_obj.cell(row=1, column=Column_Num, value=key)
-            Row_Num = 1
-            for each_box_data in List_Box_Data:
-                Row_Num += 1
-                Column_Num = 0
-                dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
-                for value in dic_Sorted_Box_Data.values():
-                    Column_Num += 1
-                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-            # List_CS_Data
-            WS_obj = WB_obj.create_sheet('List_CS_Data')
-            Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
-            Column_Num = 0
-            for key in Dic_Column_Name.keys():
-                Column_Num += 1
-                WS_obj.cell(row=1, column=Column_Num, value=key)
-            Row_Num = 1
-            for each_cs_data in List_CS_Data:
-                Row_Num += 1
-                Column_Num = 0
-                dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
-                for value in dic_Sorted_CS_Data.values():
-                    Column_Num += 1
-                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-            # List_OC_Data
-            WS_obj = WB_obj.create_sheet('List_OC_Data')
-            Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-            Column_Num = 0
-            for key in Dic_Column_Name.keys():
-                Column_Num += 1
-                WS_obj.cell(row=1, column=Column_Num, value=key)
-            Row_Num = 1
-            for each_oc_data in List_OC_Data:
-                Row_Num += 1
-                Column_Num = 0
-                dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-                for value in dic_Sorted_OC_Data.values():
-                    Column_Num += 1
-                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-            WB_obj.save(each_File_Name+'.xlsx')
-            WB_obj.close()
-
 # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
-
-# 0'太原', 
-# 1'阳曲县', 
-# 2'太原阳曲县山西豪德置业有限公司企业宽带GF1006号东楼道GF2006二级分光器001', 
-# 3'太原阳曲县山西豪德置业有限公司企业宽带GF1006号东楼道GF2006', 
-# 4'B20304188218004', 
-# 5'2870791671-山西豪德置业有限公司',
-# 6'太原阳曲县大盂-OLT68-FH-AN5516-01',
-# 7'ME_大盂:Board_GCOB[1]-PTP_GPON4', 
-# 8'太原阳曲县山西豪德置业有限公司企业宽带1-7#东楼道2号一级分光器', 
-# 9'太原阳曲县山西豪德置业有限公司企业宽带1-7#东楼道2号一级分光器-1-006', 
-# 10'二级', 
-# 11'太原阳曲县山西豪德置业有限公司企业宽带1-6#东楼道2-6二级分光器'
