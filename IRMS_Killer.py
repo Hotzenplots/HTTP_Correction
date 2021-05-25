@@ -549,9 +549,76 @@ def Generate_OC_POS_Data_and_OC_Name():
                     each_oc_data['OC_Name'] = each_oc_data['OC_Name'][:(len(each_oc_data['OC_Name']) - 4)] + '{:04d}'.format(int(each_oc_data['OC_Name'][(len(each_oc_data['OC_Name']) - 4):]) + int(increase_num))
                     break
 
-def SaSaSa_Save(Para_Para_File_Name):
+def LoLoLo_Load(Para_File_Name):
+    WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx')
 
-    WB_obj = openpyxl.load_workbook(Para_Para_File_Name+'.xlsx')
+    List_Sheets = WB_obj.sheetnames
+    # List_Box_Data
+    if 'List_Box_Data' in List_Sheets: 
+        WS_obj = WB_obj['List_Box_Data']
+        List_Keys = []
+        List_Box_Data_Saved = []
+        for line_num, row in enumerate(WS_obj.rows):
+            List_Value = []
+            for cell in row:
+                if line_num == 0:
+                    if cell.value != None:
+                        List_Keys.append(cell.value)
+                if line_num != 0:
+                    if cell.value != None :
+                        List_Value.append(cell.value)
+            if (line_num != 0) and (len(List_Value) != 0):
+                List_Box_Data_Saved.append(dict(zip(List_Keys, List_Value)))
+        if len(List_Box_Data_Saved) != 0:
+            global List_Box_Data
+            List_Box_Data = copy.deepcopy(List_Box_Data_Saved)
+
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design or P11_Termination or P12_Update_1_Fix_OCS:
+        # List_CS_Data
+        if 'List_CS_Data' in List_Sheets: 
+            WS_obj = WB_obj['List_CS_Data']
+            List_Keys = []
+            List_CS_Data_Saved = []
+            for line_num, row in enumerate(WS_obj.rows):
+                List_Value = []
+                for cell in row:
+                    if line_num == 0:
+                        if cell.value != None:
+                            List_Keys.append(cell.value)
+                    if line_num != 0:
+                        if cell.value != None :
+                            List_Value.append(cell.value)
+                if (line_num != 0) and (len(List_Value) != 0):
+                    List_CS_Data_Saved.append(dict(zip(List_Keys, List_Value)))
+            if len(List_CS_Data_Saved) != 0:
+                global List_CS_Data
+                List_CS_Data = copy.deepcopy(List_CS_Data_Saved)
+
+        # List_OC_Data
+        if 'List_OC_Data' in List_Sheets: 
+            WS_obj = WB_obj['List_OC_Data']
+            List_Keys = []
+            List_OC_Data_Saved = []
+            for line_num, row in enumerate(WS_obj.rows):
+                List_Value = []
+                for cell in row:
+                    if line_num == 0:
+                        if cell.value != None:
+                            List_Keys.append(cell.value)
+                    if line_num != 0:
+                        if cell.value != None :
+                            List_Value.append(cell.value)
+                if (line_num != 0) and (len(List_Value) != 0):
+                    List_OC_Data_Saved.append(dict(zip(List_Keys, List_Value)))
+            if len(List_OC_Data_Saved) != 0:
+                global List_OC_Data
+                List_OC_Data = copy.deepcopy(List_OC_Data_Saved)
+
+    WB_obj.close()
+
+def SaSaSa_Save(Para_File_Name):
+
+    WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx')
 
     List_Sheets = WB_obj.sheetnames
     # List_Box_Data
@@ -592,141 +659,86 @@ def SaSaSa_Save(Para_Para_File_Name):
                 Column_Num += 1
                 WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
-    # List_CS_Data
-    if 'List_CS_Data' in List_Sheets:
-        WS_obj = WB_obj['List_CS_Data']
+    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design or P11_Termination or P12_Update_1_Fix_OCS:
+        # List_CS_Data
+        if 'List_CS_Data' in List_Sheets:
+            WS_obj = WB_obj['List_CS_Data']
 
-        for row in WS_obj['A1:AD500']:
-            for cell in row:
-                cell.value = None
+            for row in WS_obj['A1:AD500']:
+                for cell in row:
+                    cell.value = None
 
-        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_cs_data in List_CS_Data:
-            Row_Num += 1
+            Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
             Column_Num = 0
-            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_CS_Data.values():
+            for key in Dic_Column_Name.keys():
                 Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-    else:
-        WS_obj = WB_obj.create_sheet('List_CS_Data')
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_cs_data in List_CS_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_CS_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+        else:
+            WS_obj = WB_obj.create_sheet('List_CS_Data')
 
-        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_cs_data in List_CS_Data:
-            Row_Num += 1
+            Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
             Column_Num = 0
-            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_CS_Data.values():
+            for key in Dic_Column_Name.keys():
                 Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_cs_data in List_CS_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_CS_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
-    # List_OC_Data
-    if 'List_OC_Data' in List_Sheets:
-        WS_obj = WB_obj['List_OC_Data']
+        # List_OC_Data
+        if 'List_OC_Data' in List_Sheets:
+            WS_obj = WB_obj['List_OC_Data']
 
-        for row in WS_obj['A1:AD500']:
-            for cell in row:
-                cell.value = None
+            for row in WS_obj['A1:AD500']:
+                for cell in row:
+                    cell.value = None
 
-        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_oc_data in List_OC_Data:
-            Row_Num += 1
+            Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
             Column_Num = 0
-            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_OC_Data.values():
+            for key in Dic_Column_Name.keys():
                 Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-    else:
-        WS_obj = WB_obj.create_sheet('List_OC_Data')
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_oc_data in List_OC_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_OC_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+        else:
+            WS_obj = WB_obj.create_sheet('List_OC_Data')
 
-        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_oc_data in List_OC_Data:
-            Row_Num += 1
+            Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
             Column_Num = 0
-            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_OC_Data.values():
+            for key in Dic_Column_Name.keys():
                 Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+                WS_obj.cell(row=1, column=Column_Num, value=key)
+            Row_Num = 1
+            for each_oc_data in List_OC_Data:
+                Row_Num += 1
+                Column_Num = 0
+                dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+                for value in dic_Sorted_OC_Data.values():
+                    Column_Num += 1
+                    WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
-    WB_obj.save(Para_Para_File_Name+'.xlsx')
+    WB_obj.save(Para_File_Name+'.xlsx')
     WB_obj.close()
 
-def LoLoLo_Load(Para_Para_File_Name):
-    WB_obj = openpyxl.load_workbook(Para_Para_File_Name+'.xlsx')
-
-    List_Sheets = WB_obj.sheetnames
-    # List_Box_Data
-    if 'List_Box_Data' in List_Sheets: 
-        WS_obj = WB_obj['List_Box_Data']
-        List_Box_Data = []
-        List_Keys = []
-        for line_num, row in enumerate(WS_obj.rows):
-            List_Value = []
-            for cell in row:
-                if line_num == 0:
-                    if cell.value != None:
-                        List_Keys.append(cell.value)
-                if line_num != 0:
-                    if cell.value != None :
-                        List_Value.append(cell.value)
-            if (line_num != 0) and (len(List_Value) != 0):
-                List_Box_Data.append(dict(zip(List_Keys, List_Value)))
-
-    # List_CS_Data
-    if 'List_CS_Data' in List_Sheets: 
-        WS_obj = WB_obj['List_CS_Data']
-        List_CS_Data = []
-        List_Keys = []
-        for line_num, row in enumerate(WS_obj.rows):
-            List_Value = []
-            for cell in row:
-                if line_num == 0:
-                    if cell.value != None:
-                        List_Keys.append(cell.value)
-                if line_num != 0:
-                    if cell.value != None :
-                        List_Value.append(cell.value)
-            if (line_num != 0) and (len(List_Value) != 0):
-                List_CS_Data.append(dict(zip(List_Keys, List_Value)))
-
-    # List_OC_Data
-    if 'List_OC_Data' in List_Sheets: 
-        WS_obj = WB_obj['List_OC_Data']
-        List_OC_Data = []
-        List_Keys = []
-        for line_num, row in enumerate(WS_obj.rows):
-            List_Value = []
-            for cell in row:
-                if line_num == 0:
-                    if cell.value != None:
-                        List_Keys.append(cell.value)
-                if line_num != 0:
-                    if cell.value != None :
-                        List_Value.append(cell.value)
-            if (line_num != 0) and (len(List_Value) != 0):
-                List_OC_Data.append(dict(zip(List_Keys, List_Value)))
-
-    WB_obj.close()
 
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
@@ -1178,6 +1190,26 @@ def Query_OC_Int_ID():
                     break
 
 
+def Execute_Data_Check(Para_File_Name):
+    Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
+    Query_Support_Sys_and_Cable_Sys()
+    Query_Project_Code_ID()
+    Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
+    Generate_Topology()
+    Generate_FS_Data()
+    Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
+    Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+    Generate_Termination_and_Direct_Melt_Data()
+    Query_Run_Certification()
+    Query_Create_Certification()
+    Swimming_Pool(Query_POS_ID, List_Box_Data)
+    Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+    Generate_OC_POS_Data_and_OC_Name()
+    Query_Optical_Route_Sheet_ID()
+    Query_Integrate_Sheet_ID()
+    Query_OC_Int_ID()
+    SaSaSa_Save(Para_File_Name)
+
 def Execute_Push_Box():
     URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=move'
     Form_Info_Head = '<xmldata mode="SinglePointEditMode"><mc type="ziyuandian">'
@@ -1481,78 +1513,9 @@ def Excute_Update_1(Para_List_CS_Data):
 def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
+
     if P0_Data_Check:
-        Generate_Local_Data(Para_File_Name)
-        Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
-        Query_Support_Sys_and_Cable_Sys()
-        Query_Project_Code_ID()
-        Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
-        Generate_Topology()
-        Generate_FS_Data()
-        Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
-        Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-        Generate_Termination_and_Direct_Melt_Data()
-        Query_Run_Certification()
-        Query_Create_Certification()
-        Swimming_Pool(Query_POS_ID, List_Box_Data)
-        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-        Generate_OC_POS_Data_and_OC_Name()
-        Query_Optical_Route_Sheet_ID()
-        Query_Integrate_Sheet_ID()
-        Query_OC_Int_ID()
-
-        WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx')
-
-        # List_Box_Data
-        WS_obj = WB_obj.create_sheet('List_Box_Data')
-        Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_box_data in List_Box_Data:
-            Row_Num += 1
-            Column_Num = 0
-            dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_Box_Data.values():
-                Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-        # List_CS_Data
-        WS_obj = WB_obj.create_sheet('List_CS_Data')
-        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_cs_data in List_CS_Data:
-            Row_Num += 1
-            Column_Num = 0
-            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_CS_Data.values():
-                Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-        # List_OC_Data
-        WS_obj = WB_obj.create_sheet('List_OC_Data')
-        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_oc_data in List_OC_Data:
-            Row_Num += 1
-            Column_Num = 0
-            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_OC_Data.values():
-                Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-        WB_obj.save(each_File_Name+'.xlsx')
-        WB_obj.close()
+        Execute_Data_Check(Para_File_Name)
 
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
@@ -1566,16 +1529,18 @@ def Main_Process(Para_File_Name):
         P10_Transmission_Design or
         P11_Termination or
         P12_Update_1_Fix_OCS):
-        print('查询Box/ResPoint开始')
-        Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
-        print('查询Box/ResPoint结束')
+        print(List_Box_Data[1])
+        LoLoLo_Load(Para_File_Name)
+        print(List_Box_Data[1])
 
-    print(List_Box_Data[5])
-    SaSaSa_Save(Para_File_Name)
-    LoLoLo_Load(Para_File_Name)
-    print(List_Box_Data[5])
-    exit()
+        if Force_Query or (len(List_Box_Data) == 0) or ('Box_ID' not in List_Box_Data[0]):
+            print('查询Box/ResPoint开始')
+            Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
+            print('查询Box/ResPoint结束')
 
+        SaSaSa_Save(Para_File_Name)
+        print(List_Box_Data[1])
+        exit()
     if P1_Push_Box:
         print('P1-开始')
         Execute_Push_Box()
@@ -1584,6 +1549,10 @@ def Main_Process(Para_File_Name):
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
         P4_Cable_Lay):
+
+        # LoLoLo_Load(Para_File_Name)
+
+
         print('查询Support_Sys_ID/Cable_Sys_ID')
         Query_Support_Sys_and_Cable_Sys()
 
