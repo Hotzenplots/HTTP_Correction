@@ -547,6 +547,74 @@ def Generate_OC_POS_Data_and_OC_Name():
                     each_oc_data['OC_Name'] = each_oc_data['OC_Name'][:(len(each_oc_data['OC_Name']) - 4)] + '{:04d}'.format(int(each_oc_data['OC_Name'][(len(each_oc_data['OC_Name']) - 4):]) + int(increase_num))
                     break
 
+def SaSaSa_Save(Para_Para_File_Name):
+
+    WB_obj = openpyxl.load_workbook(Para_Para_File_Name+'.xlsx')
+    List_Sheets = WB_obj.sheetnames
+
+    # List_Box_Data
+    if 'List_Box_Data' in List_Sheets:
+        WS_obj = WB_obj['List_Box_Data']
+
+        for row in WS_obj['A1:AD500']:
+            for cell in row:
+                cell.value = None
+
+        Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_box_data in List_Box_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_Box_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+    else:
+        WS_obj = WB_obj.create_sheet('List_Box_Data')
+        Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_box_data in List_Box_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_Box_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+    WB_obj.save(Para_Para_File_Name+'.xlsx')
+    WB_obj.close()
+
+def LoLoLo_Load(Para_Para_File_Name):
+    WB_obj = openpyxl.load_workbook(Para_Para_File_Name+'.xlsx')
+    List_Sheets = WB_obj.sheetnames
+
+    # List_Box_Data
+    if 'List_Box_Data' in List_Sheets: 
+        WS_obj = WB_obj['List_Box_Data']
+        List_Box_Data = []
+        List_Keys = []
+        for line_num, row in enumerate(WS_obj.rows):
+            List_Value = []
+            for cell in row:
+                if line_num == 0:
+                    if cell.value != None:
+                        List_Keys.append(cell.value)
+                if line_num != 0:
+                    if cell.value != None :
+                        List_Value.append(cell.value)
+            if (line_num != 0) and (len(List_Value) != 0):
+                List_Box_Data.append(dict(zip(List_Keys, List_Value)))
+
+    WB_obj.close()
+
 
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
@@ -1301,9 +1369,8 @@ def Excute_Update_1(Para_List_CS_Data):
 def Main_Process(Para_File_Name):
 
     Generate_Local_Data(Para_File_Name)
-
     if P0_Data_Check:
-        Generate_Local_Data(each_File_Name)
+        Generate_Local_Data(Para_File_Name)
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         Query_Support_Sys_and_Cable_Sys()
         Query_Project_Code_ID()
@@ -1322,7 +1389,7 @@ def Main_Process(Para_File_Name):
         Query_Integrate_Sheet_ID()
         Query_OC_Int_ID()
 
-        WB_obj = openpyxl.load_workbook(each_File_Name+'.xlsx')
+        WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx')
 
         # List_Box_Data
         WS_obj = WB_obj.create_sheet('List_Box_Data')
@@ -1390,6 +1457,12 @@ def Main_Process(Para_File_Name):
         print('查询Box/ResPoint开始')
         Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
         print('查询Box/ResPoint结束')
+
+    print(List_Box_Data[5])
+    SaSaSa_Save(Para_File_Name)
+    LoLoLo_Load(Para_File_Name)
+    print(List_Box_Data[5])
+    exit()
 
     if P1_Push_Box:
         print('P1-开始')
