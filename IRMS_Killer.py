@@ -71,6 +71,7 @@ def Generate_Local_Data(Para_File_Name):
     Username_Run = List_Template_Selected[19]
     Password_Run = List_Template_Selected[20]
 
+    global Force_Query
     '''读取并整理Sheet_Info,生成List_Box_Type和其他参数'''
     Longitude_Start     = WS_obj['B2'].value
     Latitude_Start      = WS_obj['B3'].value
@@ -78,6 +79,7 @@ def Generate_Local_Data(Para_File_Name):
     Vertical_Density    = WS_obj['B5'].value
     Anchor_Point_Buttom = WS_obj['B6'].value
     Anchor_Point_Right  = WS_obj['B7'].value
+    Force_Query         = WS_obj['B8'].value
 
     global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit, P10_Transmission_Design,P11_Termination,P12_Update_1_Fix_OCS
     P0_Data_Check               = WS_obj['E2'].value
@@ -168,11 +170,11 @@ def Generate_Local_Data(Para_File_Name):
             List_CS_Data.append(dict({'A_Box_Name': OCS_A_Box_Name}))
             List_CS_Data[row_num - 1]['Z_Box_Name'] = OCS_Z_Box_Name
             List_CS_Data[row_num - 1]['Width'] = OCS_Width
-        
+
         #Length_Prepare
         Horizontal_Metre = 111.11 * 1000 * math.cos(Latitude_Start * math.pi / 180)
         Vertical_Metre = 111.11 * 1000
-        
+
         for dic_num_in_osc in List_CS_Data:
             for dic_num_in_box in List_Box_Data:
                 if dic_num_in_osc['A_Box_Name'] == dic_num_in_box['Box_Name']:
@@ -550,8 +552,8 @@ def Generate_OC_POS_Data_and_OC_Name():
 def SaSaSa_Save(Para_Para_File_Name):
 
     WB_obj = openpyxl.load_workbook(Para_Para_File_Name+'.xlsx')
-    List_Sheets = WB_obj.sheetnames
 
+    List_Sheets = WB_obj.sheetnames
     # List_Box_Data
     if 'List_Box_Data' in List_Sheets:
         WS_obj = WB_obj['List_Box_Data']
@@ -575,6 +577,7 @@ def SaSaSa_Save(Para_Para_File_Name):
                 WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
     else:
         WS_obj = WB_obj.create_sheet('List_Box_Data')
+
         Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
         Column_Num = 0
         for key in Dic_Column_Name.keys():
@@ -589,13 +592,89 @@ def SaSaSa_Save(Para_Para_File_Name):
                 Column_Num += 1
                 WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
 
+    # List_CS_Data
+    if 'List_CS_Data' in List_Sheets:
+        WS_obj = WB_obj['List_CS_Data']
+
+        for row in WS_obj['A1:AD500']:
+            for cell in row:
+                cell.value = None
+
+        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_cs_data in List_CS_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_CS_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+    else:
+        WS_obj = WB_obj.create_sheet('List_CS_Data')
+
+        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_cs_data in List_CS_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_CS_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+    # List_OC_Data
+    if 'List_OC_Data' in List_Sheets:
+        WS_obj = WB_obj['List_OC_Data']
+
+        for row in WS_obj['A1:AD500']:
+            for cell in row:
+                cell.value = None
+
+        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_oc_data in List_OC_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_OC_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+    else:
+        WS_obj = WB_obj.create_sheet('List_OC_Data')
+
+        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+        Column_Num = 0
+        for key in Dic_Column_Name.keys():
+            Column_Num += 1
+            WS_obj.cell(row=1, column=Column_Num, value=key)
+        Row_Num = 1
+        for each_oc_data in List_OC_Data:
+            Row_Num += 1
+            Column_Num = 0
+            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+            for value in dic_Sorted_OC_Data.values():
+                Column_Num += 1
+                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
     WB_obj.save(Para_Para_File_Name+'.xlsx')
     WB_obj.close()
 
 def LoLoLo_Load(Para_Para_File_Name):
     WB_obj = openpyxl.load_workbook(Para_Para_File_Name+'.xlsx')
-    List_Sheets = WB_obj.sheetnames
 
+    List_Sheets = WB_obj.sheetnames
     # List_Box_Data
     if 'List_Box_Data' in List_Sheets: 
         WS_obj = WB_obj['List_Box_Data']
@@ -613,8 +692,41 @@ def LoLoLo_Load(Para_Para_File_Name):
             if (line_num != 0) and (len(List_Value) != 0):
                 List_Box_Data.append(dict(zip(List_Keys, List_Value)))
 
-    WB_obj.close()
+    # List_CS_Data
+    if 'List_CS_Data' in List_Sheets: 
+        WS_obj = WB_obj['List_CS_Data']
+        List_CS_Data = []
+        List_Keys = []
+        for line_num, row in enumerate(WS_obj.rows):
+            List_Value = []
+            for cell in row:
+                if line_num == 0:
+                    if cell.value != None:
+                        List_Keys.append(cell.value)
+                if line_num != 0:
+                    if cell.value != None :
+                        List_Value.append(cell.value)
+            if (line_num != 0) and (len(List_Value) != 0):
+                List_CS_Data.append(dict(zip(List_Keys, List_Value)))
 
+    # List_OC_Data
+    if 'List_OC_Data' in List_Sheets: 
+        WS_obj = WB_obj['List_OC_Data']
+        List_OC_Data = []
+        List_Keys = []
+        for line_num, row in enumerate(WS_obj.rows):
+            List_Value = []
+            for cell in row:
+                if line_num == 0:
+                    if cell.value != None:
+                        List_Keys.append(cell.value)
+                if line_num != 0:
+                    if cell.value != None :
+                        List_Value.append(cell.value)
+            if (line_num != 0) and (len(List_Value) != 0):
+                List_OC_Data.append(dict(zip(List_Keys, List_Value)))
+
+    WB_obj.close()
 
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
