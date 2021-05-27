@@ -829,7 +829,7 @@ def Query_POS_ID(Para_List_Box_Data):
     List_POS_ID = []
     for each_POS_data in Response_Body['data']:
         List_POS_Name.append(each_POS_data['zh_label'])
-        List_POS_ID.append(each_POS_data['int_id'])
+        List_POS_ID.append(int(each_POS_data['int_id']))
     Para_List_Box_Data['POS_IDs'] = dict(zip(List_POS_Name, List_POS_ID))
 
 def Query_POS_Port_IDs(Para_List_Box_Data):
@@ -846,6 +846,7 @@ def Query_POS_Port_IDs(Para_List_Box_Data):
         Response_Body = lxml.etree.HTML(Response_Body)
         List_POS_Port_IDs = Response_Body.xpath('//@id')
         List_POS_Port_IDs.pop(0)
+        List_POS_Port_IDs = [int(x) for x in List_POS_Port_IDs]
         List_POS_Port_Names = Response_Body.xpath('//@name')
         Para_List_Box_Data['POS_Port_IDs'].append(List_POS_Port_IDs)
         
@@ -1308,14 +1309,14 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         Generate_Termination_and_Direct_Melt_Data()
-        # Query_Run_Certification()
-        # Query_Create_Certification()
-        # Swimming_Pool(Query_POS_ID, List_Box_Data)
-        # Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-        # Generate_OC_POS_Data_and_OC_Name()
-        # Query_Optical_Route_Sheet_ID()
-        # Query_Integrate_Sheet_ID()
-        # Query_OC_Int_ID()
+        Query_Run_Certification()
+        Query_Create_Certification()
+        Swimming_Pool(Query_POS_ID, List_Box_Data)
+        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+        Generate_OC_POS_Data_and_OC_Name()
+        Query_Optical_Route_Sheet_ID()
+        Query_Integrate_Sheet_ID()
+        Query_OC_Int_ID()
 
         WB_obj = openpyxl.load_workbook(each_File_Name+'.xlsx')
 
@@ -1529,7 +1530,7 @@ if __name__ == '__main__':
         Main_Process(each_File_Name)
 
     js = json.dumps(List_Box_Data,ensure_ascii=False)
-    file = open('test.txt', 'w')
+    file = open('test.json', 'w', encoding='utf-8')
     file.write(js)
     file.close()
 
