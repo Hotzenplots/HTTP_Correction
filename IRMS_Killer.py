@@ -199,7 +199,7 @@ def Generate_Local_Data(Para_File_Name):
             dic_num_in_osc['DQS_ID'] = List_Template_Selected[5]
             dic_num_in_osc['DQS_County_ID'] = List_Template_Selected[7]
             dic_num_in_osc['DQS_Maintainer_ID'] = List_Template_Selected[9]
-            dic_num_in_osc['Task_Name_ID'] = Task_Name_ID_List[0]
+            dic_num_in_osc['Task_Name_ID'] = int(Task_Name_ID_List[0])
 
         '''生成List_OC_Data'''
         global List_OC_Data
@@ -216,7 +216,7 @@ def Generate_Local_Data(Para_File_Name):
                     'Business_Name': Task_Name_ID_List[1],
                     'Project_Code': each_7013_line[4],
                     'Task_Name': each_7013_line[5],
-                    'Task_Name_ID': Task_Name_ID_List[0],
+                    'Task_Name_ID': int(Task_Name_ID_List[0]),
                     'DQS_Project': List_Template_Selected[11],
                     'DQS_Project_ID': List_Template_Selected[3],
                     'DQS': List_Template_Selected[12],
@@ -626,7 +626,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Support_Sys_ID = Response_Body.xpath('//@newid')
         Support_Sys_ID = Support_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Support_Sys_ID'] = Support_Sys_ID
+            ocs_num['Support_Sys_ID'] = int(Support_Sys_ID)
         print('引上系统ID-{}'.format(Support_Sys_ID))
 
     elif List_SS_Count[0] == '1':
@@ -634,7 +634,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Support_Sys_ID = Response_Body.xpath('//@int_id')
         Support_Sys_ID = Support_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Support_Sys_ID'] = Support_Sys_ID
+            ocs_num['Support_Sys_ID'] = int(Support_Sys_ID)
         print('引上系统ID-{}'.format(Support_Sys_ID))
 
     #Cable_System
@@ -661,7 +661,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Cable_Sys_ID = Response_Body.xpath('//@newid')
         Cable_Sys_ID = Cable_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
+            ocs_num['Cable_Sys_ID'] = int(Cable_Sys_ID)
         print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
     elif List_CS_Count[0] == '1':
@@ -669,7 +669,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Cable_Sys_ID = Response_Body.xpath('//@int_id')
         Cable_Sys_ID = Cable_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
+            ocs_num['Cable_Sys_ID'] = int(Cable_Sys_ID)
         print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
 def Query_Run_Certification():
@@ -753,7 +753,7 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_Name'] = List_Response_Value[1]
-    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_ID'] = List_Response_Value[0]
+    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_ID'] = int(List_Response_Value[0])
 
     Form_Info = '<request><query mc="guanglanduan" where="1=1 AND ZH_LABEL LIKE \'%'+str(Para_List_CS_Data['A_Box_Name'])+'资源点-'+str(Para_List_CS_Data['Z_Box_Name'])+'资源点'+'%\'" returnfields="INT_ID,ZH_LABEL"/></request>'
     Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
@@ -764,7 +764,7 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_Name'] = List_Response_Value[1]
-    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID'] = List_Response_Value[0]
+    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID'] = int(List_Response_Value[0])
     for cable_seg in List_CS_Data:
         if (Para_List_CS_Data['A_Box_Name'] == cable_seg['A_Box_Name']) and (Para_List_CS_Data['Z_Box_Name'] == cable_seg['Z_Box_Name']):
             cable_seg['Support_Seg_Name'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_Name']
@@ -794,7 +794,7 @@ def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
 
 def Query_CS_Fiber_IDs(Para_List_CS_Data):
     URL_Query_CS_Fiber_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
-    Form_Info = '<params><param key="equ_type" value="fiberseg"/><param key="equ_id" value="'+Para_List_CS_Data['Cable_Seg_ID']+'"/></params>'
+    Form_Info = '<params><param key="equ_type" value="fiberseg"/><param key="equ_id" value="'+str(Para_List_CS_Data['Cable_Seg_ID'])+'"/></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
     Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
@@ -896,14 +896,14 @@ def Query_Optical_Route_Sheet_ID():
             Repete_Start = (int(work_sheet_num) * 40)
             Repete_End = (int(work_sheet_num + 1) * 40)
             for oc_num in range(Repete_Start,Repete_End):
-                List_OC_Data[oc_num]['Pro_ID'] = List_Work_Sheet_Info[3]
+                List_OC_Data[oc_num]['Pro_ID'] = int(List_Work_Sheet_Info[3])
                 if (oc_num + 1) == len(List_OC_Data):
                     break
         else:
             Repete_Start = (int(work_sheet_num) * 40)
             Repete_End = (int(work_sheet_num + 1) * 40)
             for oc_num in range(Repete_Start,Repete_End):
-                List_OC_Data[oc_num]['Pro_ID'] = Response_Body['root'][0]['FLOW_ID']
+                List_OC_Data[oc_num]['Pro_ID'] = int(Response_Body['root'][0]['FLOW_ID'])
                 if (oc_num + 1) == len(List_OC_Data):
                     break
 
@@ -970,7 +970,7 @@ def Query_Integrate_Sheet_ID():
     elif Response_Body['totalCount'] != 0:
         print(Integrate_Sheet_Name, "工单Pro_ID", Response_Body['root'][0]['PROCESSINSTID'])
         for each_cs_data in List_CS_Data:
-            each_cs_data['Pro_ID'] = Response_Body['root'][0]['PROCESSINSTID']
+            each_cs_data['Pro_ID'] = int(Response_Body['root'][0]['PROCESSINSTID'])
 
 def Query_OC_Int_ID():
     List_Pro_ID = []
@@ -1529,9 +1529,28 @@ if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
 
-    js = json.dumps(List_Box_Data,ensure_ascii=False)
-    file = open('test.json', 'w', encoding='utf-8')
-    file.write(js)
-    file.close()
+    List_Sorted_Box_Data = []
+    for each_box_data in List_Box_Data:
+        each_sorted_box_data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+        List_Sorted_Box_Data.append(each_sorted_box_data)
+    JS_List_Box_Data = json.dumps(List_Sorted_Box_Data,ensure_ascii=False)
+    with open('Box.json', 'w', encoding='utf-8') as File_Box:
+        File_Box.write(JS_List_Box_Data)
+
+    List_Sorted_CS_Data = []
+    for each_cs_data in List_CS_Data:
+        each_sorted_cs_data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+        List_Sorted_CS_Data.append(each_sorted_cs_data)
+    JS_List_CS_Data = json.dumps(List_Sorted_CS_Data,ensure_ascii=False)
+    with open('Cable.json', 'w', encoding='utf-8') as File_Box:
+        File_Box.write(JS_List_CS_Data)
+
+    List_Sorted_OC_Data = []
+    for each_oc_data in List_OC_Data:
+        each_sorted_oc_data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+        List_Sorted_OC_Data.append(each_sorted_oc_data)
+    JS_List_OC_Data = json.dumps(List_Sorted_OC_Data,ensure_ascii=False)
+    with open('Optical.json', 'w', encoding='utf-8') as File_Box:
+        File_Box.write(JS_List_OC_Data)
 
 # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
