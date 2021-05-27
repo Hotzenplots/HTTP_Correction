@@ -9,6 +9,7 @@ import json
 import math
 import lxml
 import openpyxl
+import os
 import re
 import requests
 import urllib
@@ -541,6 +542,7 @@ def Generate_OC_POS_Data_and_OC_Name():
                     break
 
 def SaSaSa_Save(Para_File_Name):
+
     List_Sorted_Box_Data = []
     for each_box_data in List_Box_Data:
         each_sorted_box_data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
@@ -554,18 +556,39 @@ def SaSaSa_Save(Para_File_Name):
         each_sorted_cs_data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
         List_Sorted_CS_Data.append(each_sorted_cs_data)
     JS_List_CS_Data = json.dumps(List_Sorted_CS_Data,ensure_ascii=False)
-    with open(Para_File_Name+'Cable.json', 'w', encoding='utf-8') as File_Box:
-        File_Box.write(JS_List_CS_Data)
+    with open(Para_File_Name+'Cable.json', 'w', encoding='utf-8') as File_Cable:
+        File_Cable.write(JS_List_CS_Data)
 
     List_Sorted_OC_Data = []
     for each_oc_data in List_OC_Data:
         each_sorted_oc_data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
         List_Sorted_OC_Data.append(each_sorted_oc_data)
     JS_List_OC_Data = json.dumps(List_Sorted_OC_Data,ensure_ascii=False)
-    with open(Para_File_Name+'Optical.json', 'w', encoding='utf-8') as File_Box:
-        File_Box.write(JS_List_OC_Data)
+    with open(Para_File_Name+'Optical.json', 'w', encoding='utf-8') as File_Optical:
+        File_Optical.write(JS_List_OC_Data)
 
+def LoLoLo_Load(Para_File_Name):
 
+    if os.path.isfile(Para_File_Name+'Box.json'):
+        with open(Para_File_Name+'Box.json', 'r', encoding='utf-8') as File_Box:
+            global List_Box_Data
+            JS_Stream = File_Box.read()
+            List_Box_Data_Saved = json.loads(JS_Stream)
+            List_Box_Data = copy.deepcopy(List_Box_Data_Saved)
+
+    if os.path.isfile(Para_File_Name+'Cable.json'):
+        with open(Para_File_Name+'Cable.json', 'r', encoding='utf-8') as File_Box:
+            global List_CS_Data
+            JS_Stream = File_Box.read()
+            List_CS_Data_Saved = json.loads(JS_Stream)
+            List_CS_Data = copy.deepcopy(List_CS_Data_Saved)
+
+    if os.path.isfile(Para_File_Name+'Optical.json'):
+        with open(Para_File_Name+'Optical.json', 'r', encoding='utf-8') as File_Box:
+            global List_OC_Data
+            JS_Stream = File_Box.read()
+            List_OC_Data_Saved = json.loads(JS_Stream)
+            List_OC_Data = copy.deepcopy(List_OC_Data_Saved)
 
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
@@ -1557,7 +1580,8 @@ def Main_Process(Para_File_Name):
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
+        LoLoLo_Load(each_File_Name)
         Main_Process(each_File_Name)
         SaSaSa_Save(each_File_Name)
-
+        print(List_Box_Data[0])
 
