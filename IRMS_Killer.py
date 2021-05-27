@@ -315,7 +315,7 @@ def Generate_FS_Data():
                 if box_info['Box_Name'] == cable_num[0]:
                     for  box_info_2 in List_Box_Data:
                         if cable_num[1] == box_info_2['Box_Name']:
-                            DL_2FS_Count_temp.append(str(box_info_2['DL_2FS_Count'] + box_info_2['2FS_Count']))
+                            DL_2FS_Count_temp.append(int(box_info_2['DL_2FS_Count'] + box_info_2['2FS_Count']))
                             box_info['DL_2FS_Count'] = DL_2FS_Count_temp
     #ODM_Rows$Tray_Count
     for box_info in List_Box_Data:
@@ -387,12 +387,6 @@ def Generate_Termination_and_Direct_Melt_Data():
                 box_info['Direct_Melt_Start'] = '0'
                 box_info['Direct_Melt_Count'] = '0'
             
-            box_info['BackUp_Fiber_Count'] = [str(i) for i in box_info['BackUp_Fiber_Count']]
-            box_info['Termination_Start'] = [str(i) for i in box_info['Termination_Start']]
-            box_info['Termination_Count'] = [str(i) for i in box_info['Termination_Count']]
-            box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
-            box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
-
         # Termination_Sequence处理
 
         box_info['Termination_Sequence'] = []
@@ -557,11 +551,11 @@ def Query_Project_Code_ID():
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
     Dic_Project_Code_ID = copy.deepcopy(Dic_Response)
     for box_num in List_Box_Data:
-        box_num['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
+        box_num['Project_Code_ID'] = int(Dic_Project_Code_ID[List_7013[1][4]])
     for ocs_num in List_CS_Data:
-        ocs_num['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
+        ocs_num['Project_Code_ID'] = int(Dic_Project_Code_ID[List_7013[1][4]])
     for oc_data in List_OC_Data:
-        oc_data['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
+        oc_data['Project_Code_ID'] = int(Dic_Project_Code_ID[List_7013[1][4]])
 
 def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     URL_Query_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
@@ -578,8 +572,8 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
     for box_num in range(len(List_Box_Data)):
         if Dic_Response['ZH_LABEL'] == List_Box_Data[box_num]['Box_Name']:
-            List_Box_Data[box_num]['Box_ID'] = Dic_Response['INT_ID']
-            List_Box_Data[box_num]['ResPoint_ID'] = Dic_Response['STRUCTURE_ID']
+            List_Box_Data[box_num]['Box_ID'] = int(Dic_Response['INT_ID'])
+            List_Box_Data[box_num]['ResPoint_ID'] = int(Dic_Response['STRUCTURE_ID'])
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
@@ -784,7 +778,7 @@ def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
         Para_List_Box_Data['Box_Type_Short'] = 'gfxx'
     elif Para_List_Box_Data['Box_Type'] == 'guangjiaojiexiang':
         Para_List_Box_Data['Box_Type_Short'] = 'gjjx'
-    Form_Info = '<params><param key="type" value="'+Para_List_Box_Data['Box_Type_Short']+'"/><param key="rack_id" value="'+Para_List_Box_Data['Box_ID']+'"/></params>'
+    Form_Info = '<params><param key="type" value="'+Para_List_Box_Data['Box_Type_Short']+'"/><param key="rack_id" value="'+str(Para_List_Box_Data['Box_ID'])+'"/></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
     Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
@@ -794,7 +788,8 @@ def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_Terminal_IDs = Response_Body.xpath('//@id')
     List_Terminal_IDs.pop(0)
-    Para_List_Box_Data['ODM_ID'] = List_Terminal_IDs.pop(0)
+    Para_List_Box_Data['ODM_ID'] = int(List_Terminal_IDs.pop(0))
+    List_Terminal_IDs = [int(x) for x in List_Terminal_IDs]
     Para_List_Box_Data['Terminal_IDs'] = List_Terminal_IDs
 
 def Query_CS_Fiber_IDs(Para_List_CS_Data):
@@ -809,6 +804,7 @@ def Query_CS_Fiber_IDs(Para_List_CS_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_CS_Fiber_IDs = Response_Body.xpath('//@id')
     List_CS_Fiber_IDs.pop(0)
+    List_CS_Fiber_IDs = [int(x) for x in List_CS_Fiber_IDs]
     Para_List_CS_Data['CS_Fiber_IDs'] = List_CS_Fiber_IDs
 
 def Query_POS_ID(Para_List_Box_Data):
@@ -1312,14 +1308,14 @@ def Main_Process(Para_File_Name):
         Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
         Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
         Generate_Termination_and_Direct_Melt_Data()
-        Query_Run_Certification()
-        Query_Create_Certification()
-        Swimming_Pool(Query_POS_ID, List_Box_Data)
-        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-        Generate_OC_POS_Data_and_OC_Name()
-        Query_Optical_Route_Sheet_ID()
-        Query_Integrate_Sheet_ID()
-        Query_OC_Int_ID()
+        # Query_Run_Certification()
+        # Query_Create_Certification()
+        # Swimming_Pool(Query_POS_ID, List_Box_Data)
+        # Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+        # Generate_OC_POS_Data_and_OC_Name()
+        # Query_Optical_Route_Sheet_ID()
+        # Query_Integrate_Sheet_ID()
+        # Query_OC_Int_ID()
 
         WB_obj = openpyxl.load_workbook(each_File_Name+'.xlsx')
 
@@ -1531,5 +1527,10 @@ def Main_Process(Para_File_Name):
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
+
+    js = json.dumps(List_Box_Data,ensure_ascii=False)
+    file = open('test.txt', 'w')
+    file.write(js)
+    file.close()
 
 # print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
