@@ -540,6 +540,32 @@ def Generate_OC_POS_Data_and_OC_Name():
                     each_oc_data['OC_Name'] = each_oc_data['OC_Name'][:(len(each_oc_data['OC_Name']) - 4)] + '{:04d}'.format(int(each_oc_data['OC_Name'][(len(each_oc_data['OC_Name']) - 4):]) + int(increase_num))
                     break
 
+def SaSaSa_Save(Para_File_Name):
+    List_Sorted_Box_Data = []
+    for each_box_data in List_Box_Data:
+        each_sorted_box_data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+        List_Sorted_Box_Data.append(each_sorted_box_data)
+    JS_List_Box_Data = json.dumps(List_Sorted_Box_Data,ensure_ascii=False)
+    with open(Para_File_Name+'Box.json', 'w', encoding='utf-8') as File_Box:
+        File_Box.write(JS_List_Box_Data)
+
+    List_Sorted_CS_Data = []
+    for each_cs_data in List_CS_Data:
+        each_sorted_cs_data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+        List_Sorted_CS_Data.append(each_sorted_cs_data)
+    JS_List_CS_Data = json.dumps(List_Sorted_CS_Data,ensure_ascii=False)
+    with open(Para_File_Name+'Cable.json', 'w', encoding='utf-8') as File_Box:
+        File_Box.write(JS_List_CS_Data)
+
+    List_Sorted_OC_Data = []
+    for each_oc_data in List_OC_Data:
+        each_sorted_oc_data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+        List_Sorted_OC_Data.append(each_sorted_oc_data)
+    JS_List_OC_Data = json.dumps(List_Sorted_OC_Data,ensure_ascii=False)
+    with open(Para_File_Name+'Optical.json', 'w', encoding='utf-8') as File_Box:
+        File_Box.write(JS_List_OC_Data)
+
+
 
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
@@ -1532,27 +1558,6 @@ def Main_Process(Para_File_Name):
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
+        SaSaSa_Save(each_File_Name)
 
-    List_Sorted_Box_Data = []
-    for each_box_data in List_Box_Data:
-        each_sorted_box_data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
-        List_Sorted_Box_Data.append(each_sorted_box_data)
-    JS_List_Box_Data = json.dumps(List_Sorted_Box_Data,ensure_ascii=False)
-    with open('Box.json', 'w', encoding='utf-8') as File_Box:
-        File_Box.write(JS_List_Box_Data)
 
-    List_Sorted_CS_Data = []
-    for each_cs_data in List_CS_Data:
-        each_sorted_cs_data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
-        List_Sorted_CS_Data.append(each_sorted_cs_data)
-    JS_List_CS_Data = json.dumps(List_Sorted_CS_Data,ensure_ascii=False)
-    with open('Cable.json', 'w', encoding='utf-8') as File_Box:
-        File_Box.write(JS_List_CS_Data)
-
-    List_Sorted_OC_Data = []
-    for each_oc_data in List_OC_Data:
-        each_sorted_oc_data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-        List_Sorted_OC_Data.append(each_sorted_oc_data)
-    JS_List_OC_Data = json.dumps(List_Sorted_OC_Data,ensure_ascii=False)
-    with open('Optical.json', 'w', encoding='utf-8') as File_Box:
-        File_Box.write(JS_List_OC_Data)
