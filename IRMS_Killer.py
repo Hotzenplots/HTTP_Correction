@@ -1233,7 +1233,7 @@ def Execute_Termination(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         termination_datas = []
         for termination_num in range(int(len(Para_List_Box_Data['Direct_Melt_Count']))):
-            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
             termination_datas.append(termination_data)
         Form_Info_Body = ''.join(termination_datas)
 
@@ -1261,7 +1261,7 @@ def Execute_Direct_Melt(Para_List_Box_Data):
 
         URL_Direct_Melt = 'http://10.209.199.74:8120/igisserver_osl/rest/fibercorekiss/fiberKiss'
 
-        Form_Info_Head = '<params respoint_id="'+Para_List_Box_Data['ResPoint_ID']+'" respoint_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" parent_rack_id="null" parent_rack_type="null">'
+        Form_Info_Head = '<params respoint_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" respoint_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" parent_rack_id="null" parent_rack_type="null">'
         each_direct_melt_datas = []
         for each_direct_melt_data_num in range(Para_List_Box_Data['Direct_Melt_Count']):
             each_direct_melt_data = '<param a_fiber_id="'+str(List_UL_CS_Fiber_IDs[each_direct_melt_data_num + Para_List_Box_Data['Direct_Melt_Start'] - 1])+'" z_fiber_id="'+str(List_DL_CS_Fiber_IDs[each_direct_melt_data_num])+'"/>'
