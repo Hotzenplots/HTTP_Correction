@@ -1384,7 +1384,7 @@ def Execute_Termination_2nd(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         termination_datas = []
         for termination_num in range(int(len(Para_List_Box_Data['Direct_Melt_Start']))):
-            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
             termination_datas.append(termination_data)
         Form_Info_Body = ''.join(termination_datas)
 
@@ -1608,7 +1608,7 @@ def Main_Process(Para_File_Name):
 
         LoLoLo_Load(Para_File_Name)
 
-        if Force_Query or ('POS_Port_IDs' not in List_Box_Data[0]):
+        if Force_Query or ('Int_ID' not in List_OC_Data[0]):
             print('查询OC_Int_ID开始')
             Query_OC_Int_ID()
             print('查询OC_Int_ID结束')
