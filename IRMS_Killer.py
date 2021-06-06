@@ -19,10 +19,13 @@ import urllib
 小区状态统计(ODM,)
 数据测存储与验证
 重新主线流程
+核查通路情况
+开关自动关闭
+同路由光路有bug
 '''
 
-File_Name = ['平舆小黑']
-# File_Name = ['智源小区']
+# File_Name = ['平舆小黑']
+File_Name = ['孙家寨']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -97,16 +100,6 @@ def Generate_Local_Data(Para_File_Name):
     P10_Transmission_Design     = WS_obj['E12'].value
     P11_Termination             = WS_obj['E13'].value
     P12_Update_1_Fix_OCS        = WS_obj['E14'].value
-
-    if (P9_Generate_Optical_Circuit and P10_Transmission_Design):
-        print('光路申请与传输设计不能同时进行')
-        exit()
-    if (P11_Termination and P10_Transmission_Design):
-        print('传输设计与备芯上架不能同时进行')
-        exit()
-    if (P9_Generate_Optical_Circuit and P11_Termination):
-        print('光路申请与备芯上架不能同时进行')
-        exit()
 
     # 根据照片修改数据
     global List_Modify_For_Photo
@@ -1580,6 +1573,9 @@ def Main_Process(Para_File_Name):
             print('查询Cable_Fiber_ID开始')
             Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
             print('查询Cable_Fiber_ID结束')
+            print('查询ODM_Terminal_IDs开始')
+            Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
+            print('查询ODM_Terminal_IDs结束')
         Generate_Termination_and_Direct_Melt_Data()
 
         SaSaSa_Save(Para_File_Name)
@@ -1609,6 +1605,7 @@ def Main_Process(Para_File_Name):
             print('查询POS_Port_IDs开始')
             Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
             print('查询POS_Port_IDs结束')
+
         Generate_OC_POS_Data_and_OC_Name()
         Query_Optical_Route_Sheet_ID()
 
@@ -1630,6 +1627,14 @@ def Main_Process(Para_File_Name):
 
         SaSaSa_Save(Para_File_Name)
 
+        Wait4Confirm = input('处理工单!')
+        while True:
+            if Wait4Confirm == 'confirm':
+                break
+            elif Wait4Confirm == 'exit':
+                exit()
+            Wait4Confirm = input('处理工单!')
+    
     if P10_Transmission_Design:
         # 处理重复通路的系统bug开始
         global List_OC_Path_Pointer
