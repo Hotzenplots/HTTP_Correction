@@ -24,8 +24,7 @@ import urllib
 同路由光路有bug
 '''
 
-# File_Name = ['平舆小黑']
-File_Name = ['孙家寨']
+File_Name = ['平舆小黑']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -537,6 +536,47 @@ def Generate_OC_POS_Data_and_OC_Name():
                     each_oc_data['OC_Name'] = each_oc_data['OC_Name'][:(len(each_oc_data['OC_Name']) - 4)] + '{:04d}'.format(int(each_oc_data['OC_Name'][(len(each_oc_data['OC_Name']) - 4):]) + int(increase_num))
                     break
 
+def Generate_Optical_Route_Path():
+    List_OC_Names = []
+    Set_OC_Names = ()
+    global List_OC_Path_Info
+    List_OC_Path_Info = []
+    for each_oc_data in List_OC_Data:
+        if each_oc_data['A_Box_Name'] != each_oc_data['Z_Box_Name']:
+            List_OC_Names.append( each_oc_data['OC_Name'][0: (len(each_oc_data['OC_Name']) - 5)])
+    Set_OC_Names = set(List_OC_Names)
+    List_OC_Names = list(Set_OC_Names)
+    List_OC_Path_Info =  [i.replace('资源点', '') for i in List_OC_Names]
+    List_OC_Path_Info =  [i.split('-') for i in List_OC_Path_Info]
+    for each_path_info in List_OC_Path_Info:    
+        Num_Each_Count = 0
+        for each_oc_data in List_OC_Data:
+            if (each_oc_data['A_Box_Name'] == each_path_info[0]) and (each_oc_data['Z_Box_Name'] == each_path_info[1]):
+                Num_Each_Count += 1
+        each_path_info.append(Num_Each_Count)
+
+def Verify_and_Distribute_Route_Path():
+    Path_Right = []
+    for each_path_info in List_OC_Path_Info:
+        if each_path_info[2] < each_path_info[3]:
+            print(each_path_info[0] + '-' + each_path_info[1] + '通路需求差异 '+ str(each_path_info[3] - each_path_info[2]))
+            Path_Right.append(0)
+        if each_path_info[2] > each_path_info[3]:
+            print(each_path_info[0] + '-' + each_path_info[1] + '通路需求差异 '+ str(each_path_info[3] - each_path_info[2]))
+            Path_Right.append(0)
+    if len(Path_Right) != 0:
+        print('修改通路后重新运行')
+        exit()
+
+    for each_oc_info in List_OC_Data:
+        for each_path_info in List_OC_Path_Info:
+            each_oc_info['Path_ID'] = 'Maple'
+        for each_path_info in List_OC_Path_Info:
+            if (each_oc_info['A_Box_Name'] == each_path_info[0]) and (each_oc_info['Z_Box_Name'] == each_path_info[1]):
+                # print(each_path_info[4][0])
+                each_oc_info['Path_ID'] = each_path_info[4][0]
+                each_path_info[4].pop(0)
+
 def SaSaSa_Save(Para_File_Name):
 
     List_Sorted_Box_Data = []
@@ -973,7 +1013,7 @@ def Query_Integrate_Sheet_ID():
     Integrate_Sheet_Time.append((datetime.datetime.now() + datetime.timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S'))
     Integrate_Sheet_Time.append((datetime.datetime.now() + datetime.timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S'))
 
-    Integrate_Sheet_Name = '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请'
+    Integrate_Sheet_Name = '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '资源入网申请'
     URL_Query_Integrate_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
     Form_Info_Encoded = 'processinstname=' + urllib.parse.quote_plus(Integrate_Sheet_Name)
     Request_Lenth = str(len(Form_Info_Encoded))
@@ -1048,6 +1088,23 @@ def Query_OC_Int_ID():
                 if oc_data['OC_Name'] == oc_info_in_response['opticname']:
                     oc_data['Int_ID'] = oc_info_in_response['intId']
                     break
+
+def Query_Path_IDs(Para_List_OC_Data):
+    # 查询通路
+    URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
+    Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
+    URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
+    Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+    Response_Body = lxml.etree.HTML(Response_Body.text)
+    List_Path_IDs = Response_Body.xpath('//line/@id')
+    for each_path_info in List_OC_Path_Info:
+        if (each_path_info[0] == Para_List_OC_Data['A_Box_Name']) and (each_path_info[1] == Para_List_OC_Data['Z_Box_Name']):
+            if len(each_path_info) == 4:
+                each_path_info[3] = len(List_Path_IDs)
+                each_path_info.append(List_Path_IDs)
+            if len(each_path_info) < 4:
+                each_path_info.append(len(List_Path_IDs))
+                each_path_info.append(List_Path_IDs)
 
 
 def Execute_Data_Check(Para_File_Name):
@@ -1311,24 +1368,8 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
 def Execute_Transmission_Design(Para_List_OC_Data):
     if Para_List_OC_Data['A_Box_Name'] != Para_List_OC_Data['Z_Box_Name']:# 业务光路
 
-        # 通路占用开始
-        URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
-        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
-        URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
-        Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        Response_Body = lxml.etree.HTML(Response_Body.text)
-
-        # 处理重复通路的系统bug开始
-        List_Path_IDs = Response_Body.xpath('//line/@id')
-        List_FiberNo = Response_Body.xpath('//line/@fiberno')
-        Dic_Paths = dict(zip(List_FiberNo,List_Path_IDs))
-        List_Path_IDs = []
-        for path in Dic_Paths.values():
-            List_Path_IDs.append(path)
-        Para_List_OC_Data['Occupy_Path'] = List_Path_IDs[(List_OC_Path_Pointer[Para_List_OC_Data['Z_Box_Name']])]
-        # 处理重复通路的系统bug结束
         URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
-        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
+        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Path_ID'])
         URL_Occupy_Path = URL_Occupy_Path + Query_Detail
         Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = lxml.etree.HTML(Response_Body.text)
@@ -1349,9 +1390,6 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         Response_Body = Response_Body.replace('\'','\"')
         Response_Body = json.loads(Response_Body)
         print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
-        # 处理重复通路的系统bug开始
-        List_OC_Path_Pointer[Para_List_OC_Data['Z_Box_Name']] += 1
-        # 处理重复通路的系统bug结束
         # 端口配置结束
 
     elif Para_List_OC_Data['A_Box_Name'] == Para_List_OC_Data['Z_Box_Name']:# 尾纤光路
@@ -1409,7 +1447,7 @@ def Execute_Termination_2nd(Para_List_Box_Data):
     List_Termination_State = Response_Body.xpath('//@msg')
     print('P11-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
-def Excute_Update_1(Para_List_CS_Data):
+def Execute_Update_1(Para_List_CS_Data):
     Dic_Response = []
     URL_Query_OpticalCable = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
     XML_Info_Encoded = 'xml=' + urllib.parse.quote_plus('''<request><query mc="guanglanduan" ids="" where="1=1 AND ZH_LABEL LIKE '%''' + Para_List_CS_Data['A_Box_Name'] + '资源点-' + Para_List_CS_Data['Z_Box_Name'] + '资源点' + '''%'" returnfields="INT_ID,ZH_LABEL,ALIAS,CITY_ID,COUNTY_ID,STATUS,PRO_TASK_ID,CJ_TASK_ID,A_EQUIP_TYPE,CJ_STATUS,A_EQUIP_ID,A_ROOM_ID,A_OBJECT_TYPE,A_OBJECT_ID,Z_EQUIP_TYPE,Z_EQUIP_ID,Z_ROOM_ID,Z_OBJECT_TYPE,Z_OBJECT_ID,SERVICE_LEVEL,C_LENGTH,M_LENGTH,FIBER_NUM,RELATED_SYSTEM,WIRE_SEG_TYPE,DIRECTION,IS_ALTER,FIBER_TYPE,DIA,GT_VERSION,VENDOR,OPTI_CABLE_TYPE,MAINT_DEP,MAINT_MODE,LAY_TYPE,RELATED_IS_AREA,IS_WRONG,MAINT_STATE,AREA_LEVEL,WRONG_INFO,SYS_VERSION,OWNERSHIP,PHONE_NO,TIME_STAMP,RES_OWNER,PRODUCE_DATE,PROJECTCODE,BUSINESS,TASK_NAME,ASSENT_NO,SERVICER,RUWANG_DATE,STUFF,BUILDER,TUIWANG_DATE,QUALITOR_PROJECT,PROJECT_ID,QUALITOR,QUALITOR_COUNTY,MAINTAINOR,QRCODE,SEG_NO,REMARK,INDEX_IN_BRANCH,IS_COMPLETE_LAY,MAINTAIN_CITY,MAINTAIN_COUNTY,CREATOR,CREAT_TIME,MODIFIER,MODIFY_TIME,STATEFLAG,BUILD_DATE,PROJECT_NAME,USER_NAME,PURPOSE,PROJECT,YJTZ,JSLY,JSYXJ,SQJSNF"/></request>''')
@@ -1634,18 +1672,27 @@ def Main_Process(Para_File_Name):
             elif Wait4Confirm == 'exit':
                 exit()
             Wait4Confirm = input('处理工单!')
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('Path_ID' not in List_OC_Data[0]):
+            print('构建通路占用逻辑')
+            Generate_Optical_Route_Path()
+            print('查询Optical_Route_Paht开始')
+            Query_Path_IDs
+            Swimming_Pool(Query_Path_IDs, List_OC_Data)
+            print('查询Optical_Route_Paht结束')
+            print('通路信息核查')
+            Verify_and_Distribute_Route_Path()
+
+        SaSaSa_Save(Para_File_Name)
+
     
     if P10_Transmission_Design:
-        # 处理重复通路的系统bug开始
-        global List_OC_Path_Pointer
-        List_OC_Path_Pointer = {}
-        for each_oc_data in List_OC_Data:
-            List_OC_Path_Pointer[each_oc_data['Z_Box_Name']] = 0
-        # 处理重复通路的系统bug结束
         print('P10-开始')
-        for each_oc_data in List_OC_Data:
-            Execute_Transmission_Design(each_oc_data)
-        # Swimming_Pool(Execute_Transmission_Design, List_OC_Data)
+        # for each_oc_data in List_OC_Data:
+        #     Execute_Transmission_Design(each_oc_data)
+        Swimming_Pool(Execute_Transmission_Design, List_OC_Data)
         print('P10-结束')
 
     if P11_Termination:
@@ -1655,7 +1702,7 @@ def Main_Process(Para_File_Name):
 
     if P12_Update_1_Fix_OCS:
         print('P12-开始')
-        Swimming_Pool(Excute_Update_1,List_CS_Data)
+        Swimming_Pool(Execute_Update_1,List_CS_Data)
         print('P12-结束')
 
 if __name__ == '__main__':
