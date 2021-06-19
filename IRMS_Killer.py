@@ -58,7 +58,7 @@ def Generate_Local_Data(Para_File_Name):
 
     WS_obj = WB_obj['Info']
     List_Template = []
-    cell_range = WS_obj['A21': 'U32']
+    cell_range = WS_obj['A21': 'U45']
     for row_data in cell_range:
         List_Temp_1 = []
         for cell in row_data:
