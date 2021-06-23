@@ -41,8 +41,8 @@ def Query_Box_Info(Para_Box_Name):
 
 def Modify_Phote_Coordinate():
     for box_info in List_Box_Info:
-        random_num = random.randint(1,9)/100000
         for photo_name in box_info['Box_Photos']:
+            random_num = random.randint(1,99)/1000000
             Obj_img = pyexiv2.Image(photo_name, 'gb2312')
             # Exif_Data = Obj_img.read_exif()
             Dic_New_Coordinate = {'Exif.GPSInfo.GPSLongitude': DD2DMS(float(box_info['LONGITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitude': DD2DMS(float(box_info['LATITUDE']) + random_num), 'Exif.GPSInfo.GPSLatitudeRef': 'N', 'Exif.GPSInfo.GPSLongitudeRef': 'E', }

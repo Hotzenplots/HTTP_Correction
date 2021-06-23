@@ -9,6 +9,7 @@ import json
 import math
 import lxml
 import openpyxl
+import os
 import re
 import requests
 import urllib
@@ -16,11 +17,11 @@ import urllib
 '''
 数据完整性验(http返回状态统计,数据数量统计,SFB,OCS)
 小区状态统计(ODM,)
-数据测存储与验证
 重新主线流程
+开关自动关闭
 '''
 
-File_Name = ['平舆小黑']
+File_Name = ['忻州忻府']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -54,7 +55,7 @@ def Generate_Local_Data(Para_File_Name):
 
     WS_obj = WB_obj['Info']
     List_Template = []
-    cell_range = WS_obj['A21': 'U31']
+    cell_range = WS_obj['A21': 'U45']
     for row_data in cell_range:
         List_Temp_1 = []
         for cell in row_data:
@@ -64,7 +65,7 @@ def Generate_Local_Data(Para_File_Name):
         if List_7013[1][1] == list_num[0]:
             List_Template_Selected = copy.deepcopy(list_num)
 
-    global Username_Create,Password_Create,Username_Run,Password_Run
+    global Username_Create,Password_Create,Username_Run,Password_Run, Force_Query, Resource_Creator, Integrate_Routine
     Username_Create = List_Template_Selected[17]
     Password_Create = List_Template_Selected[18]
     Username_Run = List_Template_Selected[19]
@@ -77,6 +78,9 @@ def Generate_Local_Data(Para_File_Name):
     Vertical_Density    = WS_obj['B5'].value
     Anchor_Point_Buttom = WS_obj['B6'].value
     Anchor_Point_Right  = WS_obj['B7'].value
+    Force_Query         = WS_obj['B8'].value
+    Resource_Creator    = WS_obj['B9'].value
+    Integrate_Routine   = WS_obj['B10'].value
 
     global P0_Data_Check,P1_Push_Box,P2_Generate_Support_Segment,P3_Generate_Cable_Segment,P4_Cable_Lay,P5_Generate_ODM,P6_Generate_Tray,P7_Termination,P8_Direct_Melt,P9_Generate_Optical_Circuit, P10_Transmission_Design,P11_Termination,P12_Update_1_Fix_OCS
     P0_Data_Check               = WS_obj['E2'].value
@@ -92,16 +96,6 @@ def Generate_Local_Data(Para_File_Name):
     P10_Transmission_Design     = WS_obj['E12'].value
     P11_Termination             = WS_obj['E13'].value
     P12_Update_1_Fix_OCS        = WS_obj['E14'].value
-
-    if (P9_Generate_Optical_Circuit and P10_Transmission_Design):
-        print('光路申请与传输设计不能同时进行')
-        exit()
-    if (P11_Termination and P10_Transmission_Design):
-        print('传输设计与备芯上架不能同时进行')
-        exit()
-    if (P9_Generate_Optical_Circuit and P11_Termination):
-        print('光路申请与备芯上架不能同时进行')
-        exit()
 
     # 根据照片修改数据
     global List_Modify_For_Photo
@@ -153,104 +147,103 @@ def Generate_Local_Data(Para_File_Name):
         for each_box_data in List_Box_Data:
             each_box_data['Longitude'] = each_box_data['Longitude'] - Horizontal_Density * (Move_Left - 1)
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design or P11_Termination or P12_Update_1_Fix_OCS:
-        '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
-        WS_obj = WB_obj['OCS_List']
-        global List_CS_Data
-        List_CS_Data = []
-        for row_num in range(1,501):
-            OCS_A_Box_Name = WS_obj.cell(row_num, 1).value
-            OCS_Z_Box_Name = WS_obj.cell(row_num, 2).value
-            OCS_Width = WS_obj.cell(row_num, 3).value
-            if OCS_A_Box_Name == None:
-                break
-            List_CS_Data.append(dict({'A_Box_Name': OCS_A_Box_Name}))
-            List_CS_Data[row_num - 1]['Z_Box_Name'] = OCS_Z_Box_Name
-            List_CS_Data[row_num - 1]['Width'] = OCS_Width
-        
-        #Length_Prepare
-        Horizontal_Metre = 111.11 * 1000 * math.cos(Latitude_Start * math.pi / 180)
-        Vertical_Metre = 111.11 * 1000
-        
-        for dic_num_in_osc in List_CS_Data:
-            for dic_num_in_box in List_Box_Data:
-                if dic_num_in_osc['A_Box_Name'] == dic_num_in_box['Box_Name']:
-                    dic_num_in_osc['A_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
-                    dic_num_in_osc['A_Box_Type'] = dic_num_in_box['Box_Type']
-                    dic_num_in_osc['A_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
-                    dic_num_in_osc['A_Longitude'] = dic_num_in_box['Longitude']
-                    dic_num_in_osc['A_Latitude'] = dic_num_in_box['Latitude']
-                if dic_num_in_osc['Z_Box_Name'] == dic_num_in_box['Box_Name']:
-                    dic_num_in_osc['Z_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
-                    dic_num_in_osc['Z_Box_Type'] = dic_num_in_box['Box_Type']
-                    dic_num_in_osc['Z_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
-                    dic_num_in_osc['Z_Longitude'] = dic_num_in_box['Longitude']
-                    dic_num_in_osc['Z_Latitude'] = dic_num_in_box['Latitude']
+    '''读取并整理Sheet_OCS_List,生成List_CS_Data'''
+    WS_obj = WB_obj['OCS_List']
+    global List_CS_Data
+    List_CS_Data = []
+    for row_num in range(1,501):
+        OCS_A_Box_Name = WS_obj.cell(row_num, 1).value
+        OCS_Z_Box_Name = WS_obj.cell(row_num, 2).value
+        OCS_Width = WS_obj.cell(row_num, 3).value
+        if OCS_A_Box_Name == None:
+            break
+        List_CS_Data.append(dict({'A_Box_Name': OCS_A_Box_Name}))
+        List_CS_Data[row_num - 1]['Z_Box_Name'] = OCS_Z_Box_Name
+        List_CS_Data[row_num - 1]['Width'] = OCS_Width
+    
+    #Length_Prepare
+    Horizontal_Metre = 111.11 * 1000 * math.cos(Latitude_Start * math.pi / 180)
+    Vertical_Metre = 111.11 * 1000
+    
+    for dic_num_in_osc in List_CS_Data:
+        for dic_num_in_box in List_Box_Data:
+            if dic_num_in_osc['A_Box_Name'] == dic_num_in_box['Box_Name']:
+                dic_num_in_osc['A_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
+                dic_num_in_osc['A_Box_Type'] = dic_num_in_box['Box_Type']
+                dic_num_in_osc['A_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
+                dic_num_in_osc['A_Longitude'] = dic_num_in_box['Longitude']
+                dic_num_in_osc['A_Latitude'] = dic_num_in_box['Latitude']
+            if dic_num_in_osc['Z_Box_Name'] == dic_num_in_box['Box_Name']:
+                dic_num_in_osc['Z_Box_Type_ID'] = dic_num_in_box['Box_Type_ID']
+                dic_num_in_osc['Z_Box_Type'] = dic_num_in_box['Box_Type']
+                dic_num_in_osc['Z_ResPoint_Type_ID'] = dic_num_in_box['ResPoint_Type_ID']
+                dic_num_in_osc['Z_Longitude'] = dic_num_in_box['Longitude']
+                dic_num_in_osc['Z_Latitude'] = dic_num_in_box['Latitude']
 
-            dic_num_in_osc['Length'] = round(math.sqrt(((dic_num_in_osc['A_Longitude'] - dic_num_in_osc['Z_Longitude']) * Horizontal_Metre) ** 2 + ((dic_num_in_osc['A_Latitude'] - dic_num_in_osc['Z_Latitude'])* Vertical_Metre) ** 2))
-            dic_num_in_osc['Business_Level'] = 8
-            dic_num_in_osc['Life_Cycle'] = 8
-            dic_num_in_osc['Owner_Type'] = 1
-            dic_num_in_osc['Owner_Name'] = 0
-            dic_num_in_osc['Field_Type'] = '市城区域'
-            dic_num_in_osc['City_ID'] = List_Template_Selected[16]
-            dic_num_in_osc['County_ID'] = List_Template_Selected[1]
-            dic_num_in_osc['DQS_Project_ID'] = List_Template_Selected[3]
-            dic_num_in_osc['DQS_ID'] = List_Template_Selected[5]
-            dic_num_in_osc['DQS_County_ID'] = List_Template_Selected[7]
-            dic_num_in_osc['DQS_Maintainer_ID'] = List_Template_Selected[9]
-            dic_num_in_osc['Task_Name_ID'] = Task_Name_ID_List[0]
+        dic_num_in_osc['Length'] = round(math.sqrt(((dic_num_in_osc['A_Longitude'] - dic_num_in_osc['Z_Longitude']) * Horizontal_Metre) ** 2 + ((dic_num_in_osc['A_Latitude'] - dic_num_in_osc['Z_Latitude'])* Vertical_Metre) ** 2))
+        dic_num_in_osc['Business_Level'] = 8
+        dic_num_in_osc['Life_Cycle'] = 8
+        dic_num_in_osc['Owner_Type'] = 1
+        dic_num_in_osc['Owner_Name'] = 0
+        dic_num_in_osc['Field_Type'] = '市城区域'
+        dic_num_in_osc['City_ID'] = List_Template_Selected[16]
+        dic_num_in_osc['County_ID'] = List_Template_Selected[1]
+        dic_num_in_osc['DQS_Project_ID'] = List_Template_Selected[3]
+        dic_num_in_osc['DQS_ID'] = List_Template_Selected[5]
+        dic_num_in_osc['DQS_County_ID'] = List_Template_Selected[7]
+        dic_num_in_osc['DQS_Maintainer_ID'] = List_Template_Selected[9]
+        dic_num_in_osc['Task_Name_ID'] = int(Task_Name_ID_List[0])
 
-        '''生成List_OC_Data'''
-        global List_OC_Data
-        List_OC_Data = []
-        for each_7013_line in List_7013: 
-            if each_7013_line[10] == '二级':
-                List_OC_Data.append(dict({
-                    'Z_POS_Name': each_7013_line[11],
-                    'Z_Box_Name': each_7013_line[3],
-                    'A_POS_Name': each_7013_line[8],
-                    'A_Port_Name': each_7013_line[9],
-                    'City_ID': List_Template_Selected[16],
-                    'County_ID': List_Template_Selected[1],
-                    'Business_Name': Task_Name_ID_List[1],
-                    'Project_Code': each_7013_line[4],
-                    'Task_Name': each_7013_line[5],
-                    'Task_Name_ID': Task_Name_ID_List[0],
-                    'DQS_Project': List_Template_Selected[11],
-                    'DQS_Project_ID': List_Template_Selected[3],
-                    'DQS': List_Template_Selected[12],
-                    'DQS_ID': List_Template_Selected[5],
-                    'DQS_County': List_Template_Selected[13],
-                    'DQS_County_ID': List_Template_Selected[7],
-                    'DQS_Maintainer': List_Template_Selected[8],
-                    'DQS_Maintainer_ID': List_Template_Selected[9],
-                    'AEquType': 10002,
-                    'ZEquType': 10002,
-                    'SXBussType': '家客业务',
-                    'AJoinName': '网元成端设备',
-                    'ZJoinName': '网元成端设备',
-                    'FiberCount': 1,
-                    'BussType': 207, # 设备类型 207 PON/402 直联光路
-                    'AppType': 1005, # 应用类型  1005 业务光路/1006 尾纤光路
-                    'ServiceLevel': 101, # 101 家客接入/111 驻地网
-                    }))
-        for each_oc_data in List_OC_Data:
-            for each_7013_line in List_7013:
-                if each_oc_data['A_POS_Name'] == each_7013_line[11]: # 中文名称 each_7013_line[2] # 资管中文名称
-                    each_oc_data['A_Box_Name'] = each_7013_line[3]
-            if each_oc_data['A_Box_Name'] == each_oc_data['Z_Box_Name']:
-                each_oc_data['BussType'] = 402
-                each_oc_data['AppType'] = 1006
-            for each_box_data in List_Box_Data:
-                if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
-                    each_oc_data['A_Box_Type'] = each_box_data['Box_Type']
-                    each_oc_data['A_Box_Type_ID'] = each_box_data['Box_Type_ID']
-                    each_oc_data['A_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
-                if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
-                    each_oc_data['Z_Box_Type'] = each_box_data['Box_Type']
-                    each_oc_data['Z_Box_Type_ID'] = each_box_data['Box_Type_ID']
-                    each_oc_data['Z_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
+    '''生成List_OC_Data'''
+    global List_OC_Data
+    List_OC_Data = []
+    for each_7013_line in List_7013: 
+        if each_7013_line[10] == '二级':
+            List_OC_Data.append(dict({
+                'Z_POS_Name': each_7013_line[11],
+                'Z_Box_Name': each_7013_line[3],
+                'A_POS_Name': each_7013_line[8],
+                'A_Port_Name': each_7013_line[9],
+                'City_ID': List_Template_Selected[16],
+                'County_ID': List_Template_Selected[1],
+                'Business_Name': Task_Name_ID_List[1],
+                'Project_Code': each_7013_line[4],
+                'Task_Name': each_7013_line[5],
+                'Task_Name_ID': int(Task_Name_ID_List[0]),
+                'DQS_Project': List_Template_Selected[11],
+                'DQS_Project_ID': List_Template_Selected[3],
+                'DQS': List_Template_Selected[12],
+                'DQS_ID': List_Template_Selected[5],
+                'DQS_County': List_Template_Selected[13],
+                'DQS_County_ID': List_Template_Selected[7],
+                'DQS_Maintainer': List_Template_Selected[8],
+                'DQS_Maintainer_ID': List_Template_Selected[9],
+                'AEquType': 10002,
+                'ZEquType': 10002,
+                'SXBussType': '家客业务',
+                'AJoinName': '网元成端设备',
+                'ZJoinName': '网元成端设备',
+                'FiberCount': 1,
+                'BussType': 207, # 设备类型 207 PON/402 直联光路
+                'AppType': 1005, # 应用类型  1005 业务光路/1006 尾纤光路
+                'ServiceLevel': 101, # 101 家客接入/111 驻地网
+                }))
+    for each_oc_data in List_OC_Data:
+        for each_7013_line in List_7013:
+            if each_oc_data['A_POS_Name'] == each_7013_line[11]: # 中文名称 each_7013_line[2] # 资管中文名称
+                each_oc_data['A_Box_Name'] = each_7013_line[3]
+        if each_oc_data['A_Box_Name'] == each_oc_data['Z_Box_Name']:
+            each_oc_data['BussType'] = 402
+            each_oc_data['AppType'] = 1006
+        for each_box_data in List_Box_Data:
+            if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
+                each_oc_data['A_Box_Type'] = each_box_data['Box_Type']
+                each_oc_data['A_Box_Type_ID'] = each_box_data['Box_Type_ID']
+                each_oc_data['A_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
+            if each_oc_data['Z_Box_Name'] == each_box_data['Box_Name']:
+                each_oc_data['Z_Box_Type'] = each_box_data['Box_Type']
+                each_oc_data['Z_Box_Type_ID'] = each_box_data['Box_Type_ID']
+                each_oc_data['Z_ResPoint_Type_ID'] = each_box_data['ResPoint_Type_ID']
 
 def Generate_Topology():
     global CS_Topology
@@ -315,7 +308,7 @@ def Generate_FS_Data():
                 if box_info['Box_Name'] == cable_num[0]:
                     for  box_info_2 in List_Box_Data:
                         if cable_num[1] == box_info_2['Box_Name']:
-                            DL_2FS_Count_temp.append(str(box_info_2['DL_2FS_Count'] + box_info_2['2FS_Count']))
+                            DL_2FS_Count_temp.append(int(box_info_2['DL_2FS_Count'] + box_info_2['2FS_Count']))
                             box_info['DL_2FS_Count'] = DL_2FS_Count_temp
     #ODM_Rows$Tray_Count
     for box_info in List_Box_Data:
@@ -387,12 +380,6 @@ def Generate_Termination_and_Direct_Melt_Data():
                 box_info['Direct_Melt_Start'] = '0'
                 box_info['Direct_Melt_Count'] = '0'
             
-            box_info['BackUp_Fiber_Count'] = [str(i) for i in box_info['BackUp_Fiber_Count']]
-            box_info['Termination_Start'] = [str(i) for i in box_info['Termination_Start']]
-            box_info['Termination_Count'] = [str(i) for i in box_info['Termination_Count']]
-            box_info['Direct_Melt_Start'] = [str(i) for i in box_info['Direct_Melt_Start']]
-            box_info['Direct_Melt_Count'] = [str(i) for i in box_info['Direct_Melt_Count']]
-
         # Termination_Sequence处理
 
         box_info['Termination_Sequence'] = []
@@ -546,6 +533,102 @@ def Generate_OC_POS_Data_and_OC_Name():
                     each_oc_data['OC_Name'] = each_oc_data['OC_Name'][:(len(each_oc_data['OC_Name']) - 4)] + '{:04d}'.format(int(each_oc_data['OC_Name'][(len(each_oc_data['OC_Name']) - 4):]) + int(increase_num))
                     break
 
+def Generate_Optical_Route_Path():
+    List_OC_Names = []
+    Set_OC_Names = ()
+    global List_OC_Path_Info
+    List_OC_Path_Info = []
+    for each_oc_data in List_OC_Data:
+        if each_oc_data['A_Box_Name'] != each_oc_data['Z_Box_Name']:
+            List_OC_Names.append( each_oc_data['OC_Name'][0: (len(each_oc_data['OC_Name']) - 5)])
+    Set_OC_Names = set(List_OC_Names)
+    List_OC_Names = list(Set_OC_Names)
+    List_OC_Path_Info =  [i.replace('资源点', '') for i in List_OC_Names]
+    List_OC_Path_Info =  [i.split('-') for i in List_OC_Path_Info]
+    for each_path_info in List_OC_Path_Info:    
+        Num_Each_Count = 0
+        for each_oc_data in List_OC_Data:
+            if (each_oc_data['A_Box_Name'] == each_path_info[0]) and (each_oc_data['Z_Box_Name'] == each_path_info[1]):
+                Num_Each_Count += 1
+        each_path_info.append(Num_Each_Count)
+
+def Verify_and_Distribute_Route_Path():
+    Path_Right = []
+    for each_path_info in List_OC_Path_Info:
+        if each_path_info[2] < each_path_info[3]:
+            print(each_path_info[0] + '-' + each_path_info[1] + '通路需求差异 '+ str(each_path_info[3] - each_path_info[2]))
+            Path_Right.append(0)
+        if each_path_info[2] > each_path_info[3]:
+            print(each_path_info[0] + '-' + each_path_info[1] + '通路需求差异 '+ str(each_path_info[3] - each_path_info[2]))
+            Path_Right.append(0)
+    if len(Path_Right) != 0:
+        print('修改通路后重新运行')
+        exit()
+
+    for each_oc_info in List_OC_Data:
+        for each_path_info in List_OC_Path_Info:
+            each_oc_info['Path_ID'] = 'Maple'
+        for each_path_info in List_OC_Path_Info:
+            if (each_oc_info['A_Box_Name'] == each_path_info[0]) and (each_oc_info['Z_Box_Name'] == each_path_info[1]):
+                # print(each_path_info[4][0])
+                each_oc_info['Path_ID'] = each_path_info[4][0]
+                each_path_info[4].pop(0)
+
+def SaSaSa_Save(Para_File_Name):
+
+    List_Sorted_Box_Data = []
+    for each_box_data in List_Box_Data:
+        each_sorted_box_data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+        List_Sorted_Box_Data.append(each_sorted_box_data)
+    JS_List_Box_Data = json.dumps(List_Sorted_Box_Data,ensure_ascii=False)
+    with open(Para_File_Name+'Box.json', 'w', encoding='utf-8') as File_Box:
+        File_Box.write(JS_List_Box_Data)
+
+    List_Sorted_CS_Data = []
+    for each_cs_data in List_CS_Data:
+        each_sorted_cs_data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+        List_Sorted_CS_Data.append(each_sorted_cs_data)
+    JS_List_CS_Data = json.dumps(List_Sorted_CS_Data,ensure_ascii=False)
+    with open(Para_File_Name+'Cable.json', 'w', encoding='utf-8') as File_Cable:
+        File_Cable.write(JS_List_CS_Data)
+
+    List_Sorted_OC_Data = []
+    for each_oc_data in List_OC_Data:
+        each_sorted_oc_data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+        List_Sorted_OC_Data.append(each_sorted_oc_data)
+    JS_List_OC_Data = json.dumps(List_Sorted_OC_Data,ensure_ascii=False)
+    with open(Para_File_Name+'Optical.json', 'w', encoding='utf-8') as File_Optical:
+        File_Optical.write(JS_List_OC_Data)
+
+def LoLoLo_Load(Para_File_Name):
+
+    if Force_Query:
+        pass
+    else:
+        if os.path.isfile(Para_File_Name+'Box.json'):
+            with open(Para_File_Name+'Box.json', 'r', encoding='utf-8') as File_Box:
+                global List_Box_Data
+                JS_Stream = File_Box.read()
+                if len(JS_Stream) != 0:
+                    List_Box_Data_Saved = json.loads(JS_Stream)
+                    List_Box_Data = copy.deepcopy(List_Box_Data_Saved)
+
+        if os.path.isfile(Para_File_Name+'Cable.json'):
+            with open(Para_File_Name+'Cable.json', 'r', encoding='utf-8') as File_Box:
+                global List_CS_Data
+                JS_Stream = File_Box.read()
+                if len(JS_Stream) != 0:
+                    List_CS_Data_Saved = json.loads(JS_Stream)
+                    List_CS_Data = copy.deepcopy(List_CS_Data_Saved)
+
+        if os.path.isfile(Para_File_Name+'Optical.json'):
+            with open(Para_File_Name+'Optical.json', 'r', encoding='utf-8') as File_Box:
+                global List_OC_Data
+                JS_Stream = File_Box.read()
+                if len(JS_Stream) != 0:
+                    List_OC_Data_Saved = json.loads(JS_Stream)
+                    List_OC_Data = copy.deepcopy(List_OC_Data_Saved)
+
 
 def Query_Project_Code_ID():
     URL_Query_Project_Code_ID = 'http://10.209.199.74:8120/igisserver_osl/rest/datatrans/expall?model=guangfenxianxiang&fname=PROJECTCODE&p1='+List_7013[1][4]
@@ -557,11 +640,11 @@ def Query_Project_Code_ID():
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
     Dic_Project_Code_ID = copy.deepcopy(Dic_Response)
     for box_num in List_Box_Data:
-        box_num['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
+        box_num['Project_Code_ID'] = int(Dic_Project_Code_ID[List_7013[1][4]])
     for ocs_num in List_CS_Data:
-        ocs_num['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
+        ocs_num['Project_Code_ID'] = int(Dic_Project_Code_ID[List_7013[1][4]])
     for oc_data in List_OC_Data:
-        oc_data['Project_Code_ID'] = Dic_Project_Code_ID[List_7013[1][4]]
+        oc_data['Project_Code_ID'] = int(Dic_Project_Code_ID[List_7013[1][4]])
 
 def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     URL_Query_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
@@ -576,25 +659,26 @@ def Query_Box_ID_ResPoint_ID_Alias(Para_List_Box_Data):
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_Response_Value_tv = Response_Body.xpath("//fv/@tv")
     Dic_Response = dict(zip(List_Response_Key,List_Response_Value))
+    
     for box_num in range(len(List_Box_Data)):
         if Dic_Response['ZH_LABEL'] == List_Box_Data[box_num]['Box_Name']:
-            List_Box_Data[box_num]['Box_ID'] = Dic_Response['INT_ID']
-            List_Box_Data[box_num]['ResPoint_ID'] = Dic_Response['STRUCTURE_ID']
+            List_Box_Data[box_num]['Box_ID'] = int(Dic_Response['INT_ID'])
+            List_Box_Data[box_num]['ResPoint_ID'] = int(Dic_Response['STRUCTURE_ID'])
             List_Box_Data[box_num]['Alias'] = Dic_Response['ALIAS']
             List_Box_Data[box_num]['ResPoint_Name'] = List_Response_Value_tv[0]
 
-    if P0_Data_Check or P2_Generate_Support_Segment or P3_Generate_Cable_Segment or P4_Cable_Lay or P5_Generate_ODM or P6_Generate_Tray or P7_Termination or P8_Direct_Melt or P9_Generate_Optical_Circuit or P10_Transmission_Design or P11_Termination or P12_Update_1_Fix_OCS:
-        for ocs_num in List_CS_Data:
-            for box_num in List_Box_Data:
-                if ocs_num['A_Box_Name'] == box_num['Box_Name']:
-                    ocs_num['A_Box_ID'] = box_num['Box_ID']
-                    ocs_num['A_ResPoint_ID'] = box_num['ResPoint_ID']
-            for box_num in List_Box_Data:
-                if ocs_num['Z_Box_Name'] == box_num['Box_Name']:
-                    ocs_num['Z_Box_ID'] = box_num['Box_ID']
-                    ocs_num['Z_ResPoint_ID'] = box_num['ResPoint_ID']
-        for each_oc_data in List_OC_Data:
-            for each_box_data in List_Box_Data:
+    for ocs_num in List_CS_Data:
+        for box_num in List_Box_Data:
+            if ocs_num['A_Box_Name'] == box_num['Box_Name']:
+                ocs_num['A_Box_ID'] = box_num['Box_ID']
+                ocs_num['A_ResPoint_ID'] = box_num['ResPoint_ID']
+        for box_num in List_Box_Data:
+            if ocs_num['Z_Box_Name'] == box_num['Box_Name']:
+                ocs_num['Z_Box_ID'] = box_num['Box_ID']
+                ocs_num['Z_ResPoint_ID'] = box_num['ResPoint_ID']
+
+    for each_oc_data in List_OC_Data:
+        for each_box_data in List_Box_Data:
                 if each_oc_data['A_Box_Name'] == each_box_data['Box_Name']:
                     each_oc_data['A_Box_ID'] = each_box_data['Box_ID']
                     each_oc_data['A_ResPoint_ID'] = each_box_data['ResPoint_ID']
@@ -632,7 +716,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Support_Sys_ID = Response_Body.xpath('//@newid')
         Support_Sys_ID = Support_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Support_Sys_ID'] = Support_Sys_ID
+            ocs_num['Support_Sys_ID'] = int(Support_Sys_ID)
         print('引上系统ID-{}'.format(Support_Sys_ID))
 
     elif List_SS_Count[0] == '1':
@@ -640,7 +724,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Support_Sys_ID = Response_Body.xpath('//@int_id')
         Support_Sys_ID = Support_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Support_Sys_ID'] = Support_Sys_ID
+            ocs_num['Support_Sys_ID'] = int(Support_Sys_ID)
         print('引上系统ID-{}'.format(Support_Sys_ID))
 
     #Cable_System
@@ -667,7 +751,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Cable_Sys_ID = Response_Body.xpath('//@newid')
         Cable_Sys_ID = Cable_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
+            ocs_num['Cable_Sys_ID'] = int(Cable_Sys_ID)
         print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
     elif List_CS_Count[0] == '1':
@@ -675,7 +759,7 @@ def Query_Support_Sys_and_Cable_Sys():
         Cable_Sys_ID = Response_Body.xpath('//@int_id')
         Cable_Sys_ID = Cable_Sys_ID[0]
         for ocs_num in List_CS_Data:
-            ocs_num['Cable_Sys_ID'] = Cable_Sys_ID
+            ocs_num['Cable_Sys_ID'] = int(Cable_Sys_ID)
         print('光缆系统ID-{}'.format(Cable_Sys_ID))
 
 def Query_Run_Certification():
@@ -759,7 +843,7 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_Name'] = List_Response_Value[1]
-    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_ID'] = List_Response_Value[0]
+    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_ID'] = int(List_Response_Value[0])
 
     Form_Info = '<request><query mc="guanglanduan" where="1=1 AND ZH_LABEL LIKE \'%'+str(Para_List_CS_Data['A_Box_Name'])+'资源点-'+str(Para_List_CS_Data['Z_Box_Name'])+'资源点'+'%\'" returnfields="INT_ID,ZH_LABEL"/></request>'
     Form_Info_Encoded = 'xml='+urllib.parse.quote_plus(Form_Info)
@@ -770,7 +854,7 @@ def Query_Support_Seg_ID_Cable_Seg_ID(Para_List_CS_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_Response_Value = Response_Body.xpath("//fv/@v")
     List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_Name'] = List_Response_Value[1]
-    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID'] = List_Response_Value[0]
+    List_CS_Support_Seg_Name_ID_Cable_Name_ID['Cable_Seg_ID'] = int(List_Response_Value[0])
     for cable_seg in List_CS_Data:
         if (Para_List_CS_Data['A_Box_Name'] == cable_seg['A_Box_Name']) and (Para_List_CS_Data['Z_Box_Name'] == cable_seg['Z_Box_Name']):
             cable_seg['Support_Seg_Name'] = List_CS_Support_Seg_Name_ID_Cable_Name_ID['Support_Seg_Name']
@@ -784,7 +868,7 @@ def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
         Para_List_Box_Data['Box_Type_Short'] = 'gfxx'
     elif Para_List_Box_Data['Box_Type'] == 'guangjiaojiexiang':
         Para_List_Box_Data['Box_Type_Short'] = 'gjjx'
-    Form_Info = '<params><param key="type" value="'+Para_List_Box_Data['Box_Type_Short']+'"/><param key="rack_id" value="'+Para_List_Box_Data['Box_ID']+'"/></params>'
+    Form_Info = '<params><param key="type" value="'+Para_List_Box_Data['Box_Type_Short']+'"/><param key="rack_id" value="'+str(Para_List_Box_Data['Box_ID'])+'"/></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
     Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&model=odm&" +  "lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
@@ -794,12 +878,13 @@ def Query_ODM_ID_and_Terminarl_IDs(Para_List_Box_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_Terminal_IDs = Response_Body.xpath('//@id')
     List_Terminal_IDs.pop(0)
-    Para_List_Box_Data['ODM_ID'] = List_Terminal_IDs.pop(0)
+    Para_List_Box_Data['ODM_ID'] = int(List_Terminal_IDs.pop(0))
+    List_Terminal_IDs = [int(x) for x in List_Terminal_IDs]
     Para_List_Box_Data['Terminal_IDs'] = List_Terminal_IDs
 
 def Query_CS_Fiber_IDs(Para_List_CS_Data):
     URL_Query_CS_Fiber_IDs = 'http://10.209.199.74:8120/igisserver_osl/rest/EquipEditModule1/getEquipModuleTerminals'
-    Form_Info = '<params><param key="equ_type" value="fiberseg"/><param key="equ_id" value="'+Para_List_CS_Data['Cable_Seg_ID']+'"/></params>'
+    Form_Info = '<params><param key="equ_type" value="fiberseg"/><param key="equ_id" value="'+str(Para_List_CS_Data['Cable_Seg_ID'])+'"/></params>'
     Form_Info_Tail = '<params><param key="pro_task_id" value=""/><param key="status" value="8"/><param key="photo" value="null"/><param key="isvirtual" value="0"/><param key="virtualtype" value=""/></params>'
     Form_Info_Encoded = "params=" + urllib.parse.quote_plus(Form_Info) + "&lifeparams=" + urllib.parse.quote_plus(Form_Info_Tail)
     Request_Lenth = str(len(Form_Info_Encoded))
@@ -809,6 +894,7 @@ def Query_CS_Fiber_IDs(Para_List_CS_Data):
     Response_Body = lxml.etree.HTML(Response_Body)
     List_CS_Fiber_IDs = Response_Body.xpath('//@id')
     List_CS_Fiber_IDs.pop(0)
+    List_CS_Fiber_IDs = [int(x) for x in List_CS_Fiber_IDs]
     Para_List_CS_Data['CS_Fiber_IDs'] = List_CS_Fiber_IDs
 
 def Query_POS_ID(Para_List_Box_Data):
@@ -833,7 +919,7 @@ def Query_POS_ID(Para_List_Box_Data):
     List_POS_ID = []
     for each_POS_data in Response_Body['data']:
         List_POS_Name.append(each_POS_data['zh_label'])
-        List_POS_ID.append(each_POS_data['int_id'])
+        List_POS_ID.append(int(each_POS_data['int_id']))
     Para_List_Box_Data['POS_IDs'] = dict(zip(List_POS_Name, List_POS_ID))
 
 def Query_POS_Port_IDs(Para_List_Box_Data):
@@ -850,6 +936,7 @@ def Query_POS_Port_IDs(Para_List_Box_Data):
         Response_Body = lxml.etree.HTML(Response_Body)
         List_POS_Port_IDs = Response_Body.xpath('//@id')
         List_POS_Port_IDs.pop(0)
+        List_POS_Port_IDs = [int(x) for x in List_POS_Port_IDs]
         List_POS_Port_Names = Response_Body.xpath('//@name')
         Para_List_Box_Data['POS_Port_IDs'].append(List_POS_Port_IDs)
         
@@ -891,22 +978,26 @@ def Query_Optical_Route_Sheet_ID():
             Response_Body = bytes(Response_Body.text, encoding="utf-8")
             Response_Body = lxml.etree.HTML(Response_Body)
             List_Work_Sheet_Info = Response_Body.xpath('//input/@value')
+            URL_Create_New_Work_Sheet_Step_1_point_5 = 'http://10.209.199.72:7112/irms/attachmentAction!queryAttachForLook.ilf'
+            URL_Create_New_Work_Sheet_Step_1_point_5 = URL_Create_New_Work_Sheet_Step_1_point_5 + '?htName=jbr&flowId=' + List_Work_Sheet_Info[3]
+            Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded'}
+            Response_Body = requests.post(URL_Create_New_Work_Sheet_Step_1_point_5, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
             URL_Create_New_Work_Sheet_Step_2 = 'http://10.209.199.72:7112/irms/opticalSchedulingAction!submit.ilf?needSh=false'
-            Form_Info_Encoded = 'ownerId=' + List_Work_Sheet_Info[1] + '&deptId=' + List_Work_Sheet_Info[2] + '&flowId=' + List_Work_Sheet_Info[3] + '&companyName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[7]) + '&companyId=' + List_Work_Sheet_Info[8] + '&workitemId=' + List_Work_Sheet_Info[10] + '&activeName=' + List_Work_Sheet_Info[14] + '&formNo=' + List_Work_Sheet_Info[15] + '&title=' + urllib.parse.quote_plus(Work_Sheet_Name) + '&startFlag=' + List_Work_Sheet_Info[19] + '&ownerName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[21]) + '&cellPhone=' +List_Work_Sheet_Info[22] + '&deptName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[23]) + '&startTime=' + urllib.parse.quote_plus(Work_Sheet_Times[0]) + '&acceptTime=' + urllib.parse.quote_plus(Work_Sheet_Times[1]) + '&replyTime=' + urllib.parse.quote_plus(Work_Sheet_Times[2]) + '&requestTime=' + urllib.parse.quote_plus(Work_Sheet_Times[3]) + '&urgentDegree=' + urllib.parse.quote_plus('一般') + '&schedulingReason='
+            Form_Info_Encoded = 'ownerId=' + List_Work_Sheet_Info[1] + '&deptId=' + List_Work_Sheet_Info[2] + '&flowId=' + List_Work_Sheet_Info[3] + '&companyName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[7]) + '&companyId=' + List_Work_Sheet_Info[8] + '&workitemId=' + List_Work_Sheet_Info[10] + '&activeName=' + List_Work_Sheet_Info[14] + '&formNo=' + List_Work_Sheet_Info[15] + '&title=' + urllib.parse.quote_plus(Work_Sheet_Name) + '&startFlag=' + List_Work_Sheet_Info[19] + '&ownerName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[21]) + '&cellPhone=' +List_Work_Sheet_Info[22] + '&deptName=' + urllib.parse.quote_plus(List_Work_Sheet_Info[23]) + '&startTime=' + urllib.parse.quote_plus(Work_Sheet_Times[0]) + '&acceptTime=' + urllib.parse.quote_plus(Work_Sheet_Times[1]) + '&replyTime=' + urllib.parse.quote_plus(Work_Sheet_Times[2]) + '&requestTime=' + urllib.parse.quote_plus(Work_Sheet_Times[3]) + '&urgentDegree=' + urllib.parse.quote_plus('一般') + '&schedulingReason=' + '&expand14=' + '&expand15=' + '&state=' + '&id=' + '&pid=' + '&currentstate=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&headingNumCode='
             Request_Lenth = str(len(Form_Info_Encoded))
-            Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+            Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth,'Accept-Language': 'zh-Hans-CN,zh-Hans;q=0.8,en-US;q=0.5,en;q=0.3','User-Agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; .NET CLR 2.0.50727; .NET CLR 3.0.30729; .NET CLR 3.5.30729)', 'Accept-Encoding': 'gzip, deflate', 'Pragma': 'no-cache'}
             Response_Body = requests.post(URL_Create_New_Work_Sheet_Step_2, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
             Repete_Start = (int(work_sheet_num) * 40)
             Repete_End = (int(work_sheet_num + 1) * 40)
             for oc_num in range(Repete_Start,Repete_End):
-                List_OC_Data[oc_num]['Pro_ID'] = List_Work_Sheet_Info[3]
+                List_OC_Data[oc_num]['Pro_ID'] = int(List_Work_Sheet_Info[3])
                 if (oc_num + 1) == len(List_OC_Data):
                     break
         else:
             Repete_Start = (int(work_sheet_num) * 40)
             Repete_End = (int(work_sheet_num + 1) * 40)
             for oc_num in range(Repete_Start,Repete_End):
-                List_OC_Data[oc_num]['Pro_ID'] = Response_Body['root'][0]['FLOW_ID']
+                List_OC_Data[oc_num]['Pro_ID'] = int(Response_Body['root'][0]['FLOW_ID'])
                 if (oc_num + 1) == len(List_OC_Data):
                     break
 
@@ -919,7 +1010,7 @@ def Query_Integrate_Sheet_ID():
     Integrate_Sheet_Time.append((datetime.datetime.now() + datetime.timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S'))
     Integrate_Sheet_Time.append((datetime.datetime.now() + datetime.timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S'))
 
-    Integrate_Sheet_Name = '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '新建分纤箱入网申请'
+    Integrate_Sheet_Name = '关于' + List_7013[1][0] + List_7013[1][1] + Task_Name_ID_List[1] + '资源入网申请'
     URL_Query_Integrate_Sheet_Exist = 'http://10.209.199.72:7112/irms/tasklistAction!waitedTaskAJAX.ilf'
     Form_Info_Encoded = 'processinstname=' + urllib.parse.quote_plus(Integrate_Sheet_Name)
     Request_Lenth = str(len(Form_Info_Encoded))
@@ -950,11 +1041,11 @@ def Query_Integrate_Sheet_ID():
         URL_Create_Integrate_Sheet_Step_3 = 'http://10.209.199.72:7112/irms/pipelineresInAction!saveDraft.ilf'
         Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + '&pid=' + '&toppid=' + '&companyName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + urllib.parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + urllib.parse.quote_plus(List_7013[1][5]) + '&remark='
         Request_Lenth = str(len(Form_Info_Encoded))
-        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded','User-Agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; .NET CLR 2.0.50727; .NET CLR 3.0.30729; .NET CLR 3.5.30729)','Accept': 'image/gif, image/jpeg, image/pjpeg, application/x-ms-application, application/xaml+xml, application/x-ms-xbap, */*', 'Accept-Language': 'zh-Hans-CN,zh-Hans;q=0.8,en-US;q=0.5,en;q=0.3', 'Referer':  'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'}
         Response_Body = requests.post(URL_Create_Integrate_Sheet_Step_3, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
 
         URL_Create_Integrate_Sheet_Step_4 = 'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf' +'?currentstate=0&flowId=' + Dic_Integrate_Sheet_Info['flowId']
-        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded'}
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded','User-Agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; .NET CLR 2.0.50727; .NET CLR 3.0.30729; .NET CLR 3.5.30729)','Accept': 'image/gif, image/jpeg, image/pjpeg, application/x-ms-application, application/xaml+xml, application/x-ms-xbap, */*'}
         Response_Body = requests.get(URL_Create_Integrate_Sheet_Step_4, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
         Response_Body = bytes(Response_Body.text, encoding="utf-8")
         Response_Body = lxml.etree.HTML(Response_Body)
@@ -965,15 +1056,14 @@ def Query_Integrate_Sheet_ID():
         URL_Create_Integrate_Sheet_Step_5 = 'http://10.209.199.72:7112/irms/pipelineresInAction!submit.ilf'
         Form_Info_Encoded = 'state=' + '&ownerId=' + str(Dic_Integrate_Sheet_Info['ownerId']) + '&deptId=' + str(Dic_Integrate_Sheet_Info['deptId']) + '&flowId=' + str(Dic_Integrate_Sheet_Info['flowId']) + '&id=' + str(Dic_Integrate_Sheet_Info['id']) + '&pid=' + '&toppid=' + '&companyName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['companyName']) + '&companyId=' + str(Dic_Integrate_Sheet_Info['companyId']) + '&currentstate=' + '&workitemId=' + '&formInfoId=' + '&prtFlowId=' + '&relationId=' + '&activeName=' + '&formNo=' + str(Dic_Integrate_Sheet_Info['formNo']) + '&title=' + urllib.parse.quote_plus(Integrate_Sheet_Name) + '&ownerName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['ownerName']) + '&cellPhone=' + str(Dic_Integrate_Sheet_Info['cellPhone']) + '&deptName=' + urllib.parse.quote_plus(Dic_Integrate_Sheet_Info['deptName']) + '&startTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&acceptTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[1]) + '&replyTime=' + urllib.parse.quote_plus(Integrate_Sheet_Time[0]) + '&protectNo=' + str(Project_Code_ID) + '&protectName=' + List_7013[1][4] + '&taskNo=' + str(Task_Name_ID_List[0]) + '&taskName=' + urllib.parse.quote_plus(List_7013[1][5]) + '&remark='
         Request_Lenth = str(len(Form_Info_Encoded))
-        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Request_Lenth}
+        Request_Header = {'Host':'10.209.199.72:7112', 'Content-Type': 'application/x-www-form-urlencoded','User-Agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; .NET CLR 2.0.50727; .NET CLR 3.0.30729; .NET CLR 3.5.30729)','Accept': 'image/gif, image/jpeg, image/pjpeg, application/x-ms-application, application/xaml+xml, application/x-ms-xbap, */*', 'Accept-Language': 'zh-Hans-CN,zh-Hans;q=0.8,en-US;q=0.5,en;q=0.3', 'Referer':  'http://10.209.199.72:7112/irms/pipelineresInAction!init.ilf'}
         Response_Body = requests.post(URL_Create_Integrate_Sheet_Step_5, data=Form_Info_Encoded, headers=Request_Header, cookies={'JSESSIONIRMS': Jsessionirms_v_Create, 'route': route_v_Create})
 
         Query_Integrate_Sheet_ID()
 
     elif Response_Body['totalCount'] != 0:
-        print(Integrate_Sheet_Name, "工单Pro_ID", Response_Body['root'][0]['PROCESSINSTID'])
         for each_cs_data in List_CS_Data:
-            each_cs_data['Pro_ID'] = Response_Body['root'][0]['PROCESSINSTID']
+            each_cs_data['Pro_ID'] = int(Response_Body['root'][0]['PROCESSINSTID'])
 
 def Query_OC_Int_ID():
     List_Pro_ID = []
@@ -996,6 +1086,97 @@ def Query_OC_Int_ID():
                     oc_data['Int_ID'] = oc_info_in_response['intId']
                     break
 
+def Query_Path_IDs(Para_List_OC_Data):
+    # 查询通路
+    URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
+    Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
+    URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
+    Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
+    Response_Body = lxml.etree.HTML(Response_Body.text)
+    List_Path_IDs = Response_Body.xpath('//line/@id')
+    for each_path_info in List_OC_Path_Info:
+        if (each_path_info[0] == Para_List_OC_Data['A_Box_Name']) and (each_path_info[1] == Para_List_OC_Data['Z_Box_Name']):
+            if len(each_path_info) == 4:
+                each_path_info[3] = len(List_Path_IDs)
+                each_path_info.append(List_Path_IDs)
+            if len(each_path_info) < 4:
+                each_path_info.append(len(List_Path_IDs))
+                each_path_info.append(List_Path_IDs)
+
+
+def Execute_Data_Check(Para_File_Name):
+
+    Generate_Local_Data(Para_File_Name)
+    Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
+    Query_Support_Sys_and_Cable_Sys()
+    Query_Project_Code_ID()
+    Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
+    Generate_Topology()
+    Generate_FS_Data()
+    Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
+    Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+    Generate_Termination_and_Direct_Melt_Data()
+    Query_Run_Certification()
+    Query_Create_Certification()
+    Swimming_Pool(Query_POS_ID, List_Box_Data)
+    Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+    Generate_OC_POS_Data_and_OC_Name()
+    Query_Optical_Route_Sheet_ID()
+    Query_Integrate_Sheet_ID()
+    Query_OC_Int_ID()
+
+    WB_obj = openpyxl.load_workbook(Para_File_Name+'.xlsx')
+
+    # List_Box_Data
+    WS_obj = WB_obj.create_sheet('List_Box_Data')
+    Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
+    Column_Num = 0
+    for key in Dic_Column_Name.keys():
+        Column_Num += 1
+        WS_obj.cell(row=1, column=Column_Num, value=key)
+    Row_Num = 1
+    for each_box_data in List_Box_Data:
+        Row_Num += 1
+        Column_Num = 0
+        dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
+        for value in dic_Sorted_Box_Data.values():
+            Column_Num += 1
+            WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+    # List_CS_Data
+    WS_obj = WB_obj.create_sheet('List_CS_Data')
+    Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
+    Column_Num = 0
+    for key in Dic_Column_Name.keys():
+        Column_Num += 1
+        WS_obj.cell(row=1, column=Column_Num, value=key)
+    Row_Num = 1
+    for each_cs_data in List_CS_Data:
+        Row_Num += 1
+        Column_Num = 0
+        dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
+        for value in dic_Sorted_CS_Data.values():
+            Column_Num += 1
+            WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+    # List_OC_Data
+    WS_obj = WB_obj.create_sheet('List_OC_Data')
+    Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
+    Column_Num = 0
+    for key in Dic_Column_Name.keys():
+        Column_Num += 1
+        WS_obj.cell(row=1, column=Column_Num, value=key)
+    Row_Num = 1
+    for each_oc_data in List_OC_Data:
+        Row_Num += 1
+        Column_Num = 0
+        dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
+        for value in dic_Sorted_OC_Data.values():
+            Column_Num += 1
+            WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
+
+    WB_obj.save(Para_File_Name+'.xlsx')
+    WB_obj.close()
 
 def Execute_Push_Box():
     URL_Push_Box = 'http://10.209.199.74:8120/igisserver_osl/rest/ResourceController/resourcesUpdate?isUpdate=move'
@@ -1022,11 +1203,15 @@ def Execute_Generate_Support_Segment():
     Form_Info_Tail = '</mc></xmldata>'
     List_Form_Info_Body = []
     for ocs_num in List_CS_Data:
-        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Support_Sys_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="INT_ID" v="new-27991311"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="PROJECT_CODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="RESOURCE_LOCATION" v="'+str(ocs_num['Field_Type'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="SYSTEM_LEVEL" v="'+str(ocs_num['Business_Level'])+'<fv k="PRO_TASK_ID" v="'+str(ocs_num['Pro_ID'])+'"/></mo>'
+        if Integrate_Routine:
+            PPPro_ID = str(ocs_num['Pro_ID'])
+        else:
+            PPPro_ID = ''
+        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Support_Sys_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点引上段'+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="INT_ID" v="new-27991311"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="PROJECT_CODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="RESOURCE_LOCATION" v="'+str(ocs_num['Field_Type'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="SYSTEM_LEVEL" v="'+str(ocs_num['Business_Level'])+'"/><fv k="PRO_TASK_ID" v="'+PPPro_ID+'"/></mo>'
         List_Form_Info_Body.append(Form_Info_Body)
     Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
-    Form_Info_Encoded = 'empname=' + urllib.parse.quote_plus('白云鹏') + '&xml=' + urllib.parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'empname=' + urllib.parse.quote_plus(Resource_Creator) + '&xml=' + urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Generate_Support_Segment, data=Form_Info_Encoded, headers=Request_Header)
@@ -1041,11 +1226,15 @@ def Execute_Generate_Cable_Segment():
     Form_Info_Tail = '</mc></xmldata>'
     List_Form_Info_Body = []
     for ocs_num in List_CS_Data:
-        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Cable_Sys_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点'+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="FIBER_TYPE" v="2"/><fv k="INT_ID" v="new-27991311"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="FIBER_NUM" v="'+str(ocs_num['Width'])+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="WIRE_SEG_TYPE" v="GYTA-'+str(ocs_num['Width'])+'"/><fv k="SERVICE_LEVEL" v="14"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="PROJECTCODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'<fv k="PRO_TASK_ID" v="'+str(ocs_num['Pro_ID'])+'"/></mo>'
+        if Integrate_Routine:
+            PPPro_ID = str(ocs_num['Pro_ID'])
+        else:
+            PPPro_ID = ''
+        Form_Info_Body = '<mo group="1" ax="'+str(ocs_num['A_Longitude'])+'" ay="'+str(ocs_num['A_Latitude'])+'" zx="'+str(ocs_num['Z_Longitude'])+'" zy="'+str(ocs_num['Z_Latitude'])+'"><fv k="QUALITOR_PROJECT" v="'+str(ocs_num['DQS_Project_ID'])+'"/><fv k="RES_OWNER" v="'+str(ocs_num['Owner_Name'])+'"/><fv k="RELATED_SYSTEM" v="'+str(ocs_num['Cable_Sys_ID'])+'"/><fv k="QUALITOR" v="'+str(ocs_num['DQS_ID'])+'"/><fv k="ZH_LABEL" v="'+str(ocs_num['A_Box_Name'])+'资源点-'+str(ocs_num['Z_Box_Name'])+'资源点'+'"/><fv k="STATUS" v="'+str(ocs_num['Life_Cycle'])+'"/><fv k="FIBER_TYPE" v="2"/><fv k="INT_ID" v="new-27991311"/><fv k="A_OBJECT_TYPE" v="'+str(ocs_num['A_ResPoint_Type_ID'])+'"/><fv k="Z_OBJECT_ID" v="'+str(ocs_num['Z_ResPoint_ID'])+'"/><fv k="A_OBJECT_ID" v="'+str(ocs_num['A_ResPoint_ID'])+'"/><fv k="Z_OBJECT_TYPE" v="'+str(ocs_num['Z_ResPoint_Type_ID'])+'"/><fv k="M_LENGTH" v="'+str(ocs_num['Length'])+'"/><fv k="CITY_ID" v="'+str(ocs_num['City_ID'])+'"/><fv k="FIBER_NUM" v="'+str(ocs_num['Width'])+'"/><fv k="MAINTAINOR" v="'+str(ocs_num['DQS_Maintainer_ID'])+'"/><fv k="WIRE_SEG_TYPE" v="GYTA-'+str(ocs_num['Width'])+'"/><fv k="SERVICE_LEVEL" v="14"/><fv k="COUNTY_ID" v="'+str(ocs_num['County_ID'])+'"/><fv k="PROJECTCODE" v="'+str(ocs_num['Project_Code_ID'])+'"/><fv k="TASK_NAME" v="'+str(ocs_num['Task_Name_ID'])+'"/><fv k="OWNERSHIP" v="'+str(ocs_num['Owner_Type'])+'"/><fv k="QUALITOR_COUNTY" v="'+str(ocs_num['DQS_County_ID'])+'"/><fv k="PRO_TASK_ID" v="'+PPPro_ID+'"/><fv k="VENDOR" v="' + '烽火' + '"/></mo>'
         List_Form_Info_Body.append(Form_Info_Body)
     Form_Info_Body = ''.join(List_Form_Info_Body)
     Form_Info = Form_Info_Head + Form_Info_Body + Form_Info_Tail
-    Form_Info_Encoded = 'empname=' + urllib.parse.quote_plus('白云鹏') + '&xml=' + urllib.parse.quote_plus(Form_Info)
+    Form_Info_Encoded = 'empname=' + urllib.parse.quote_plus(Resource_Creator) + '&xml=' + urllib.parse.quote_plus(Form_Info)
     Request_Lenth = str(len(Form_Info_Encoded))
     Request_Header = {'Host': '10.209.199.74:8120','Content-Type': 'application/x-www-form-urlencoded','Content-Length': Request_Lenth}
     Response_Body = requests.post(URL_Generate_Cable_Segment, data=Form_Info_Encoded, headers=Request_Header)
@@ -1106,7 +1295,7 @@ def Execute_Termination(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         termination_datas = []
         for termination_num in range(int(len(Para_List_Box_Data['Direct_Melt_Count']))):
-            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Count'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
             termination_datas.append(termination_data)
         Form_Info_Body = ''.join(termination_datas)
 
@@ -1134,7 +1323,7 @@ def Execute_Direct_Melt(Para_List_Box_Data):
 
         URL_Direct_Melt = 'http://10.209.199.74:8120/igisserver_osl/rest/fibercorekiss/fiberKiss'
 
-        Form_Info_Head = '<params respoint_id="'+Para_List_Box_Data['ResPoint_ID']+'" respoint_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" parent_rack_id="null" parent_rack_type="null">'
+        Form_Info_Head = '<params respoint_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'" respoint_type="'+str(Para_List_Box_Data['ResPoint_Type_ID'])+'" parent_rack_id="null" parent_rack_type="null">'
         each_direct_melt_datas = []
         for each_direct_melt_data_num in range(Para_List_Box_Data['Direct_Melt_Count']):
             each_direct_melt_data = '<param a_fiber_id="'+str(List_UL_CS_Fiber_IDs[each_direct_melt_data_num + Para_List_Box_Data['Direct_Melt_Start'] - 1])+'" z_fiber_id="'+str(List_DL_CS_Fiber_IDs[each_direct_melt_data_num])+'"/>'
@@ -1176,24 +1365,8 @@ def Execute_Generate_Optical_Circut(Para_List_OC_Data):
 def Execute_Transmission_Design(Para_List_OC_Data):
     if Para_List_OC_Data['A_Box_Name'] != Para_List_OC_Data['Z_Box_Name']:# 业务光路
 
-        # 通路占用开始
-        URL_Query_Path_IDs = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!Searchpath4page.ilf?'
-        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&aobject=' + str(Para_List_OC_Data['A_Box_ID']) + '&zobject=' + str(Para_List_OC_Data['Z_Box_ID']) + '&aobjectType=' + str(Para_List_OC_Data['A_Box_Type_ID']) + '&zobjectType=' + str(Para_List_OC_Data['Z_Box_Type_ID']) + '&limit=20&start=1'
-        URL_Query_Path_IDs = URL_Query_Path_IDs + Query_Detail
-        Response_Body = requests.get(URL_Query_Path_IDs, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
-        Response_Body = lxml.etree.HTML(Response_Body.text)
-
-        # 处理重复通路的系统bug开始
-        List_Path_IDs = Response_Body.xpath('//line/@id')
-        List_FiberNo = Response_Body.xpath('//line/@fiberno')
-        Dic_Paths = dict(zip(List_FiberNo,List_Path_IDs))
-        List_Path_IDs = []
-        for path in Dic_Paths.values():
-            List_Path_IDs.append(path)
-        Para_List_OC_Data['Occupy_Path'] = List_Path_IDs[(List_OC_Path_Pointer[Para_List_OC_Data['Z_Box_Name']])]
-        # 处理重复通路的系统bug结束
         URL_Occupy_Path = 'http://10.209.199.72:7112/irms/opticOpenDesignAction!occupyPath.ilf?'
-        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Occupy_Path'])
+        Query_Detail = 'flowId=' + str(Para_List_OC_Data['Pro_ID']) + '&workorid=' + str(Para_List_OC_Data['Int_ID']) + '&pathid=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '-' + '&dpath=' + str(Para_List_OC_Data['A_Box_ID']) + ';' + str(Para_List_OC_Data['Z_Box_ID']) + '&ids=' + str(Para_List_OC_Data['Path_ID'])
         URL_Occupy_Path = URL_Occupy_Path + Query_Detail
         Response_Body = requests.get(URL_Occupy_Path, cookies={'JSESSIONIRMS': Jsessionirms_v_Run, 'route': route_v_Run})
         Response_Body = lxml.etree.HTML(Response_Body.text)
@@ -1214,9 +1387,6 @@ def Execute_Transmission_Design(Para_List_OC_Data):
         Response_Body = Response_Body.replace('\'','\"')
         Response_Body = json.loads(Response_Body)
         print('P10配置端口-{}-{}'.format(Response_Body['mesg'] ,Para_List_OC_Data['OC_Name']))
-        # 处理重复通路的系统bug开始
-        List_OC_Path_Pointer[Para_List_OC_Data['Z_Box_Name']] += 1
-        # 处理重复通路的系统bug结束
         # 端口配置结束
 
     elif Para_List_OC_Data['A_Box_Name'] == Para_List_OC_Data['Z_Box_Name']:# 尾纤光路
@@ -1257,7 +1427,7 @@ def Execute_Termination_2nd(Para_List_Box_Data):
     elif Para_List_Box_Data['1FS_Count'] != 0:
         termination_datas = []
         for termination_num in range(int(len(Para_List_Box_Data['Direct_Melt_Start']))):
-            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+Para_List_Box_Data['ResPoint_ID']+'"/>'
+            termination_data = '<param fiber_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][3])+'" a_equ_id="'+str(Para_List_Box_Data['Box_ID'])+'" a_equ_type="'+Para_List_Box_Data['Box_Type_Short']+'" a_port_id="'+str(Para_List_Box_Data['Direct_Melt_Start'][termination_num][1])+'" z_equ_id="" z_port_id="" room_id="'+str(Para_List_Box_Data['ResPoint_ID'])+'"/>'
             termination_datas.append(termination_data)
         Form_Info_Body = ''.join(termination_datas)
 
@@ -1274,7 +1444,7 @@ def Execute_Termination_2nd(Para_List_Box_Data):
     List_Termination_State = Response_Body.xpath('//@msg')
     print('P11-{}-{}'.format(Para_List_Box_Data['Box_Name'], List_Termination_State[0]))
 
-def Excute_Update_1(Para_List_CS_Data):
+def Execute_Update_1(Para_List_CS_Data):
     Dic_Response = []
     URL_Query_OpticalCable = 'http://10.209.199.74:8120/igisserver_osl/rest/generalSaveOrGet/generalGet'
     XML_Info_Encoded = 'xml=' + urllib.parse.quote_plus('''<request><query mc="guanglanduan" ids="" where="1=1 AND ZH_LABEL LIKE '%''' + Para_List_CS_Data['A_Box_Name'] + '资源点-' + Para_List_CS_Data['Z_Box_Name'] + '资源点' + '''%'" returnfields="INT_ID,ZH_LABEL,ALIAS,CITY_ID,COUNTY_ID,STATUS,PRO_TASK_ID,CJ_TASK_ID,A_EQUIP_TYPE,CJ_STATUS,A_EQUIP_ID,A_ROOM_ID,A_OBJECT_TYPE,A_OBJECT_ID,Z_EQUIP_TYPE,Z_EQUIP_ID,Z_ROOM_ID,Z_OBJECT_TYPE,Z_OBJECT_ID,SERVICE_LEVEL,C_LENGTH,M_LENGTH,FIBER_NUM,RELATED_SYSTEM,WIRE_SEG_TYPE,DIRECTION,IS_ALTER,FIBER_TYPE,DIA,GT_VERSION,VENDOR,OPTI_CABLE_TYPE,MAINT_DEP,MAINT_MODE,LAY_TYPE,RELATED_IS_AREA,IS_WRONG,MAINT_STATE,AREA_LEVEL,WRONG_INFO,SYS_VERSION,OWNERSHIP,PHONE_NO,TIME_STAMP,RES_OWNER,PRODUCE_DATE,PROJECTCODE,BUSINESS,TASK_NAME,ASSENT_NO,SERVICER,RUWANG_DATE,STUFF,BUILDER,TUIWANG_DATE,QUALITOR_PROJECT,PROJECT_ID,QUALITOR,QUALITOR_COUNTY,MAINTAINOR,QRCODE,SEG_NO,REMARK,INDEX_IN_BRANCH,IS_COMPLETE_LAY,MAINTAIN_CITY,MAINTAIN_COUNTY,CREATOR,CREAT_TIME,MODIFIER,MODIFY_TIME,STATEFLAG,BUILD_DATE,PROJECT_NAME,USER_NAME,PURPOSE,PROJECT,YJTZ,JSLY,JSYXJ,SQJSNF"/></request>''')
@@ -1302,77 +1472,7 @@ def Main_Process(Para_File_Name):
     Generate_Local_Data(Para_File_Name)
 
     if P0_Data_Check:
-        Generate_Local_Data(each_File_Name)
-        Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
-        Query_Support_Sys_and_Cable_Sys()
-        Query_Project_Code_ID()
-        Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
-        Generate_Topology()
-        Generate_FS_Data()
-        Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
-        Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-        Generate_Termination_and_Direct_Melt_Data()
-        Query_Run_Certification()
-        Query_Create_Certification()
-        Swimming_Pool(Query_POS_ID, List_Box_Data)
-        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-        Generate_OC_POS_Data_and_OC_Name()
-        Query_Optical_Route_Sheet_ID()
-        Query_Integrate_Sheet_ID()
-        Query_OC_Int_ID()
-
-        WB_obj = openpyxl.load_workbook(each_File_Name+'.xlsx')
-
-        # List_Box_Data
-        WS_obj = WB_obj.create_sheet('List_Box_Data')
-        Dic_Column_Name = dict(sorted(List_Box_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_box_data in List_Box_Data:
-            Row_Num += 1
-            Column_Num = 0
-            dic_Sorted_Box_Data = dict(sorted(each_box_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_Box_Data.values():
-                Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-        # List_CS_Data
-        WS_obj = WB_obj.create_sheet('List_CS_Data')
-        Dic_Column_Name = dict(sorted(List_CS_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_cs_data in List_CS_Data:
-            Row_Num += 1
-            Column_Num = 0
-            dic_Sorted_CS_Data = dict(sorted(each_cs_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_CS_Data.values():
-                Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-        # List_OC_Data
-        WS_obj = WB_obj.create_sheet('List_OC_Data')
-        Dic_Column_Name = dict(sorted(List_OC_Data[0].items(), key = lambda item:item[0]))
-        Column_Num = 0
-        for key in Dic_Column_Name.keys():
-            Column_Num += 1
-            WS_obj.cell(row=1, column=Column_Num, value=key)
-        Row_Num = 1
-        for each_oc_data in List_OC_Data:
-            Row_Num += 1
-            Column_Num = 0
-            dic_Sorted_OC_Data = dict(sorted(each_oc_data.items(), key = lambda item:item[0]))
-            for value in dic_Sorted_OC_Data.values():
-                Column_Num += 1
-                WS_obj.cell(row=Row_Num, column=Column_Num, value=str(value))
-
-        WB_obj.save(each_File_Name+'.xlsx')
-        WB_obj.close()
+        Execute_Data_Check(Para_File_Name)
 
     if (P1_Push_Box or 
         P2_Generate_Support_Segment or 
@@ -1386,9 +1486,15 @@ def Main_Process(Para_File_Name):
         P10_Transmission_Design or
         P11_Termination or
         P12_Update_1_Fix_OCS):
-        print('查询Box/ResPoint开始')
-        Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
-        print('查询Box/ResPoint结束')
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('Box_ID' not in List_Box_Data[0]) or ('A_Box_ID' not in List_CS_Data[0]) or ('A_Box_ID' not in List_OC_Data[0]):
+            print('查询Box/ResPoint开始')
+            Swimming_Pool(Query_Box_ID_ResPoint_ID_Alias, List_Box_Data)
+            print('查询Box/ResPoint结束')
+
+        SaSaSa_Save(Para_File_Name)
 
     if P1_Push_Box:
         print('P1-开始')
@@ -1398,18 +1504,31 @@ def Main_Process(Para_File_Name):
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or 
         P4_Cable_Lay):
-        print('查询Support_Sys_ID/Cable_Sys_ID')
-        Query_Support_Sys_and_Cable_Sys()
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('Support_Sys_ID' not in List_CS_Data[0]):
+            print('查询Support_Sys_ID/Cable_Sys_ID')
+            Query_Support_Sys_and_Cable_Sys()
+
+        SaSaSa_Save(Para_File_Name)
 
     if (P2_Generate_Support_Segment or 
         P3_Generate_Cable_Segment or
         P9_Generate_Optical_Circuit or
         P10_Transmission_Design):
-        print('查询Project_Code_ID')
-        Query_Project_Code_ID()
+
+        LoLoLo_Load(Para_File_Name)
+        
+        if Force_Query or ('Project_Code_ID' not in List_Box_Data[0]) or ('Project_Code_ID' not in List_CS_Data[0]) or ('Project_Code_ID' not in List_OC_Data[0]):
+
+            print('查询Project_Code_ID')
+            Query_Project_Code_ID()
+
+        SaSaSa_Save(Para_File_Name)
 
     if (P2_Generate_Support_Segment or 
-        P3_Generate_Cable_Segment):
+        P3_Generate_Cable_Segment) and Integrate_Routine:
         Query_Create_Certification()
         Query_Integrate_Sheet_ID()
 
@@ -1427,10 +1546,15 @@ def Main_Process(Para_File_Name):
         P7_Termination or
         P8_Direct_Melt or
         P11_Termination):
-        if (not ('Support_Seg_ID' in List_CS_Data[0])) or (not ('Cable_Seg_ID' in List_CS_Data[0])):
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('Support_Seg_ID' not in List_CS_Data[0]) or ('Cable_Seg_ID' not in List_CS_Data[0]):
             print('查询Support_Seg_ID/Cable_Seg_ID开始')
             Swimming_Pool(Query_Support_Seg_ID_Cable_Seg_ID, List_CS_Data)
             print('查询Support_Seg_ID/Cable_Seg_ID结束')
+
+        SaSaSa_Save(Para_File_Name)
 
     if P4_Cable_Lay:
         print('P4-开始')
@@ -1442,8 +1566,13 @@ def Main_Process(Para_File_Name):
         P7_Termination or
         P8_Direct_Melt or
         P11_Termination):
+
+        LoLoLo_Load(Para_File_Name)
+
         Generate_Topology()
         Generate_FS_Data()
+
+        SaSaSa_Save(Para_File_Name)
 
     if P5_Generate_ODM:
         print('P5-开始')
@@ -1454,10 +1583,15 @@ def Main_Process(Para_File_Name):
         P7_Termination or
         P8_Direct_Melt or
         P11_Termination): # 单独添加托盘需要查询
-        if not ('ODM_ID' in List_Box_Data[0]):
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('ODM_ID' not in List_Box_Data[0]):
             print('查询ODM_ID开始')
             Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
             print('查询ODM_ID结束')
+
+        SaSaSa_Save(Para_File_Name)
 
     if P6_Generate_Tray:
         print('P6-开始')
@@ -1467,10 +1601,19 @@ def Main_Process(Para_File_Name):
     if (P7_Termination or
         P8_Direct_Melt or
         P11_Termination):
-        print('查询Cable_Fiber_ID开始')
-        Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
-        print('查询Cable_Fiber_ID结束')
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('CS_Fiber_IDs' not in List_CS_Data[0]):
+            print('查询Cable_Fiber_ID开始')
+            Swimming_Pool(Query_CS_Fiber_IDs, List_CS_Data)
+            print('查询Cable_Fiber_ID结束')
+            print('查询ODM_Terminal_IDs开始')
+            Swimming_Pool(Query_ODM_ID_and_Terminarl_IDs, List_Box_Data)
+            print('查询ODM_Terminal_IDs结束')
         Generate_Termination_and_Direct_Melt_Data()
+
+        SaSaSa_Save(Para_File_Name)
 
     if P7_Termination:
         print('P7-开始')
@@ -1486,14 +1629,22 @@ def Main_Process(Para_File_Name):
         P10_Transmission_Design):
         Query_Run_Certification()
         Query_Create_Certification()
-        print('查询POS_ID开始')
-        Swimming_Pool(Query_POS_ID, List_Box_Data)
-        print('查询POS_ID结束')
-        print('查询POS_Port_ID开始')
-        Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
-        print('查询POS_Port_ID结束')
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('POS_IDs' not in List_Box_Data[0]):
+            print('查询POS_IDs开始')
+            Swimming_Pool(Query_POS_ID, List_Box_Data)
+            print('查询POS_IDs结束')
+        if Force_Query or ('POS_Port_IDs' not in List_Box_Data[0]):
+            print('查询POS_Port_IDs开始')
+            Swimming_Pool(Query_POS_Port_IDs, List_Box_Data)
+            print('查询POS_Port_IDs结束')
+
         Generate_OC_POS_Data_and_OC_Name()
         Query_Optical_Route_Sheet_ID()
+
+        SaSaSa_Save(Para_File_Name)
 
     if P9_Generate_Optical_Circuit:
         print('P9-开始')
@@ -1501,17 +1652,39 @@ def Main_Process(Para_File_Name):
         print('P9-结束')
 
     if P10_Transmission_Design:
-        print('查询OC_Int_ID开始')
-        Query_OC_Int_ID()
-        print('查询OC_Int_ID结束')
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('Int_ID' not in List_OC_Data[0]):
+            print('查询OC_Int_ID开始')
+            Query_OC_Int_ID()
+            print('查询OC_Int_ID结束')
+
+        SaSaSa_Save(Para_File_Name)
+
+        Wait4Confirm = input('处理工单!')
+        while True:
+            if Wait4Confirm == 'confirm':
+                break
+            elif Wait4Confirm == 'exit':
+                exit()
+            Wait4Confirm = input('处理工单!')
+
+        LoLoLo_Load(Para_File_Name)
+
+        if Force_Query or ('Path_ID' not in List_OC_Data[0]):
+            print('构建通路占用逻辑')
+            Generate_Optical_Route_Path()
+            print('查询Optical_Route_Paht开始')
+            Query_Path_IDs
+            Swimming_Pool(Query_Path_IDs, List_OC_Data)
+            print('查询Optical_Route_Paht结束')
+            print('通路信息核查')
+            Verify_and_Distribute_Route_Path()
+
+        SaSaSa_Save(Para_File_Name)
 
     if P10_Transmission_Design:
-        # 处理重复通路的系统bug开始
-        global List_OC_Path_Pointer
-        List_OC_Path_Pointer = {}
-        for each_oc_data in List_OC_Data:
-            List_OC_Path_Pointer[each_oc_data['Z_Box_Name']] = 0
-        # 处理重复通路的系统bug结束
         print('P10-开始')
         for each_oc_data in List_OC_Data:
             Execute_Transmission_Design(each_oc_data)
@@ -1525,11 +1698,9 @@ def Main_Process(Para_File_Name):
 
     if P12_Update_1_Fix_OCS:
         print('P12-开始')
-        Swimming_Pool(Excute_Update_1,List_CS_Data)
+        Swimming_Pool(Execute_Update_1,List_CS_Data)
         print('P12-结束')
 
 if __name__ == '__main__':
     for each_File_Name in File_Name:
         Main_Process(each_File_Name)
-
-# print(sorted(List_CS_Data[10].items(), key = lambda item:item[0]))
