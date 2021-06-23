@@ -17,14 +17,11 @@ import urllib
 '''
 数据完整性验(http返回状态统计,数据数量统计,SFB,OCS)
 小区状态统计(ODM,)
-数据测存储与验证
 重新主线流程
-核查通路情况
 开关自动关闭
-同路由光路有bug
 '''
 
-File_Name = ['平舆小黑']
+File_Name = ['忻州忻府']
 
 def Swimming_Pool(Para_Functional_Function,Para_Some_Iterable_Obj):
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as Pool_Executor:
@@ -1687,12 +1684,11 @@ def Main_Process(Para_File_Name):
 
         SaSaSa_Save(Para_File_Name)
 
-    
     if P10_Transmission_Design:
         print('P10-开始')
-        # for each_oc_data in List_OC_Data:
-        #     Execute_Transmission_Design(each_oc_data)
-        Swimming_Pool(Execute_Transmission_Design, List_OC_Data)
+        for each_oc_data in List_OC_Data:
+            Execute_Transmission_Design(each_oc_data)
+        # Swimming_Pool(Execute_Transmission_Design, List_OC_Data)
         print('P10-结束')
 
     if P11_Termination:
